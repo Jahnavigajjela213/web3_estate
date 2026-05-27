@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
-import { ArrowUpRight, Building2, CheckCircle2, CreditCard, MapPin, Receipt, Search, ShieldCheck, Wallet, X } from "lucide-react";
+import { Building2, CheckCircle2, CreditCard, MapPin, Receipt, Search, ShieldCheck, Wallet } from "lucide-react";
 import { api } from "@/lib/api";
 import { queryKeys, useTenantActiveRentals, useTenantProperties } from "@/lib/queries";
 import { AdminTopbar } from "@/components/layout/topbar";
@@ -24,6 +24,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { EmptyState } from "@/components/common/empty";
 import { cn, formatCurrency, formatDateTime, formatNumber, percent, shortAddress } from "@/lib/utils";
 import { PropertyImageCarousel } from "@/components/properties/property-image-carousel";
+import { PropertyDetailDialog } from "@/components/properties/property-detail-dialog";
 import type { PayRentPrepareResponse, Property } from "@/lib/types";
 import { useCurrentWallet } from "@/components/investor/use-current-wallet";
 import { sendPayRentTx } from "@/components/investor/contract-actions";
@@ -43,6 +44,11 @@ export default function TenantRentalsPage() {
   const rentals = useTenantActiveRentals(wallet);
   const [search, setSearch] = useState("");
 
+  const activeRentalIds = useMemo(
+    () => new Set((rentals.data ?? []).map((rental) => rental.property_id)),
+    [rentals.data],
+  );
+
   const filtered = useMemo(() => {
     const list = properties.data ?? [];
     if (!search.trim()) return list;
@@ -50,14 +56,29 @@ export default function TenantRentalsPage() {
     return list.filter((p) => p.name.toLowerCase().includes(q) || (p.location || "").toLowerCase().includes(q));
   }, [properties.data, search]);
 
+  const myRentals = useMemo(
+    () => filtered.filter((property) => activeRentalIds.has(property.id) || property.current_cycle_paid),
+    [activeRentalIds, filtered],
+  );
+  const availableRentals = useMemo(
+    () =>
+      filtered.filter(
+        (property) =>
+          Number(property.tokens_sold ?? 0) > 0 &&
+          !activeRentalIds.has(property.id) &&
+          !property.current_cycle_paid,
+      ),
+    [activeRentalIds, filtered],
+  );
+
   return (
     <>
       <AdminTopbar title="Rentals" subtitle="Browse properties and pay rent directly via the RentDistribution contract" />
       <main className="flex-1 space-y-5 p-4 lg:p-6">
         <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div>
-            <h2 className="text-sm font-medium">Available properties</h2>
-            <p className="text-xs text-muted-foreground">Rent payments are executed on-chain against the RentDistribution contract.</p>
+            <h2 className="text-base font-semibold">Rental Properties</h2>
+            <p className="text-xs text-muted-foreground">Search by property name or location and pay rent directly on-chain.</p>
           </div>
           <div className="relative w-full md:w-72">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
@@ -65,24 +86,45 @@ export default function TenantRentalsPage() {
           </div>
         </div>
 
-        {properties.isLoading ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[380px] rounded-xl" />)}
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-base font-semibold">My Rentals</h3>
+            <p className="text-xs text-muted-foreground">Paid and active rental properties.</p>
           </div>
-        ) : filtered.length === 0 ? (
-          <EmptyState title="No properties found" description="Try a different search term or wait for new listings." />
-        ) : (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-            {filtered.map((property) => (
-              <RentalCard
-                key={property.id}
-                property={property}
-                wallet={wallet}
-                isActiveRental={rentals.data?.some((r) => r.property_id === property.id) ?? false}
-              />
-            ))}
+          {properties.isLoading || rentals.isLoading ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 3 }).map((_, i) => <Skeleton key={i} className="h-[410px] rounded-xl" />)}
+            </div>
+          ) : myRentals.length === 0 ? (
+            <EmptyState title="No paid rentals yet" description="Paid rentals will appear here after confirmation." />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {myRentals.map((property) => (
+                <RentalCard key={property.id} property={property} wallet={wallet} isActiveRental />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="space-y-3">
+          <div>
+            <h3 className="text-base font-semibold">Available Rentals</h3>
+            <p className="text-xs text-muted-foreground">Properties with investor ownership and rent enabled.</p>
           </div>
-        )}
+          {properties.isLoading ? (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => <Skeleton key={i} className="h-[410px] rounded-xl" />)}
+            </div>
+          ) : availableRentals.length === 0 ? (
+            <EmptyState title="No available rentals" description="Try a different search term or wait for rent-ready properties." />
+          ) : (
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+              {availableRentals.map((property) => (
+                <RentalCard key={property.id} property={property} wallet={wallet} isActiveRental={false} />
+              ))}
+            </div>
+          )}
+        </section>
       </main>
     </>
   );
@@ -107,6 +149,7 @@ function RentalCard({
   const soldPct = Number(property.sold_percentage ?? percent(sold, supply));
   const monthlyRent = Number(property.monthly_rent_eth ?? 0);
   const [open, setOpen] = useState(false);
+  const [detailOpen, setDetailOpen] = useState(false);
 
   useEffect(() => {
     if (takePendingModalOpen("PAY_RENT", property.id)) {
@@ -121,27 +164,44 @@ function RentalCard({
   }, [property.id]);
 
   return (
-    <Card className="group overflow-hidden transition-transform duration-200 hover:-translate-y-0.5">
-      <PropertyImageCarousel images={property.images} propertyId={property.id} title={property.name}>
-        <div className="absolute left-3 top-3 flex gap-2">
-          <Badge variant={property.rent_enabled ? "success" : "warning"}>{property.rent_enabled ? "Rent ready" : "Rent not set"}</Badge>
-          {isActiveRental && <Badge variant="outline" className="rounded-md">Currently Renting</Badge>}
+    <Card
+      role="button"
+      tabIndex={0}
+      className="group cursor-pointer overflow-hidden transition-transform duration-200 hover:-translate-y-0.5"
+      onClick={() => setDetailOpen(true)}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          setDetailOpen(true);
+        }
+      }}
+    >
+      <PropertyImageCarousel images={property.images?.slice(0, 1)} propertyId={property.id} title={property.name} className="h-44" />
+      <CardContent className="space-y-3 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <div className="flex min-w-0 items-center gap-1.5">
+              <span className="shrink-0 text-base font-semibold text-foreground">#{property.id}</span>
+              <h3 className="truncate text-base font-semibold">{property.name}</h3>
+              <Badge variant="outline" className="rounded-md px-2 py-0 font-mono text-xs">{property.token_symbol}</Badge>
+            </div>
+            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+              <MapPin className="h-3 w-3" /> {property.location}
+            </div>
+          </div>
+          <Badge variant={isActiveRental ? "success" : property.rent_enabled ? "success" : "warning"} className="shrink-0 rounded-md">
+            {isActiveRental ? "Renting" : property.rent_enabled ? "Rent ready" : "Rent not set"}
+          </Badge>
         </div>
-        <div className="absolute bottom-3 left-3 right-3">
-          <h3 className="truncate text-lg font-semibold tracking-tight">{property.name}</h3>
-          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground"><MapPin className="h-3 w-3" /> {property.location}</div>
-        </div>
-      </PropertyImageCarousel>
-      <CardContent className="space-y-4 p-4">
-        <div className="grid grid-cols-2 gap-3 text-xs">
-          <Fact label="Monthly rent" value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "Not set"} />
-          <Fact label="Property value" value={formatCurrency(property.total_value)} />
-          <Fact label="Token symbol" value={property.token_symbol} />
-          <Fact label="Ownership sold" value={`${soldPct.toFixed(1)}%`} />
+        <div className="grid grid-cols-2 gap-2 text-xs">
+          <Fact label="Monthly Rent" value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "Not set"} />
+          <Fact label="Property Value" value={formatCurrency(property.total_value)} />
+          <Fact label="Supply" value={formatNumber(supply)} />
+          <Fact label="Ownership Sold" value={`${soldPct.toFixed(1)}%`} />
         </div>
         <div>
           <div className="mb-1.5 flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Token sale progress</span>
+            <span className="text-muted-foreground">Token Sale Progress</span>
             <span className="font-medium tabular-nums">{formatNumber(sold)} / {formatNumber(supply)}</span>
           </div>
           <Progress value={soldPct} className="h-1.5" />
@@ -152,7 +212,10 @@ function RentalCard({
             size="sm"
             variant={property.current_cycle_paid ? "secondary" : "default"}
             disabled={!wallet || !property.rent_enabled || property.current_cycle_paid}
-            onClick={() => setOpen(true)}
+            onClick={(event) => {
+              event.stopPropagation();
+              setOpen(true);
+            }}
           >
             {property.current_cycle_paid ? (
               <>
@@ -162,7 +225,7 @@ function RentalCard({
             ) : (
               <>
                 <Receipt className="mr-1 h-3.5 w-3.5" />
-                Pay Rent
+                Rent Now
               </>
             )}
           </Button>
@@ -178,6 +241,18 @@ function RentalCard({
           </div>
         ) : null}
       </CardContent>
+      <PropertyDetailDialog
+        property={property}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        statusLabel={isActiveRental ? "Renting" : property.rent_enabled ? "Rent ready" : "Rent not set"}
+        actionLabel={property.current_cycle_paid ? "Paid ✔" : "Rent Now"}
+        actionDisabled={!wallet || !property.rent_enabled || property.current_cycle_paid}
+        onAction={() => {
+          setDetailOpen(false);
+          setOpen(true);
+        }}
+      />
       <PayRentDialog property={property} wallet={wallet} open={open} onOpenChange={setOpen} />
     </Card>
   );

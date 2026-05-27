@@ -108,7 +108,7 @@ function MarketplaceCard({ property, wallet }: { property: Property; wallet: str
 
   return (
     <Card className="group overflow-hidden transition-transform duration-200 hover:-translate-y-0.5">
-      <PropertyImageCarousel images={property.images} propertyId={property.id} title={property.name}>
+      <PropertyImageCarousel images={property.images?.slice(0, 1)} propertyId={property.id} title={property.name}>
         <div className="absolute left-3 top-3 flex gap-2">
           <Badge variant={investable ? "success" : "warning"}>{investable ? "Investable" : "Not ready"}</Badge>
           {monthlyRent > 0 ? <Badge variant="outline">Rent {monthlyRent.toFixed(4)} ETH/mo</Badge> : null}

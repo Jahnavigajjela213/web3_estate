@@ -1,9 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, Coins, Receipt, Wallet } from "lucide-react";
 import { toast } from "sonner";
 import { AdminTopbar } from "@/components/layout/topbar";
+import { GradientStatCard } from "@/components/dashboard/gradient-stat-card";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -53,29 +54,41 @@ export default function RentManagementPage() {
       />
       <main className="flex-1 space-y-4 p-4 lg:p-6">
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-          <Stat
+          <GradientStatCard
             title="Total Rent Collected"
             value={formatEth(rent.data?.total_rent_collected_wei ?? "0", { fromWei: true, digits: 3 })}
+            sub={`${rent.data?.total_payments ?? 0} payments`}
             icon={Wallet}
             loading={rent.isLoading}
+            accent="violet"
+            graph="steps"
           />
-          <Stat
+          <GradientStatCard
             title="Total Rent Distributed"
             value={formatEth(rent.data?.total_rent_distributed_wei ?? "0", { fromWei: true, digits: 3 })}
+            sub={`${rent.data?.total_distributions ?? 0} distributions`}
             icon={Coins}
             loading={rent.isLoading}
+            accent="mint"
+            graph="line"
           />
-          <Stat
+          <GradientStatCard
             title="Payments Received"
             value={String(rent.data?.total_payments ?? 0)}
+            sub="From tenants"
             icon={Receipt}
             loading={rent.isLoading}
+            accent="cyan"
+            graph="bars"
           />
-          <Stat
+          <GradientStatCard
             title="Active Rentals"
             value={String(rent.data?.active_rentals ?? 0)}
+            sub="Current rentals"
             icon={ArrowRight}
             loading={rent.isLoading}
+            accent="lavender"
+            graph="dots"
           />
         </div>
 
@@ -101,7 +114,7 @@ export default function RentManagementPage() {
                   <TableRow className="hover:bg-transparent">
                     <TableHead>Tenant</TableHead>
                     <TableHead>Property</TableHead>
-                    <TableHead className="text-right">Amount</TableHead>
+                    <TableHead>Amount</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -136,7 +149,7 @@ export default function RentManagementPage() {
                         <TableCell className="text-xs">
                           {p.property_name ?? `#${p.property_id}`}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-xs">
+                        <TableCell className="tabular-nums text-xs">
                           {Number(p.amount_eth).toFixed(4)} ETH
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
@@ -160,8 +173,8 @@ export default function RentManagementPage() {
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
                     <TableHead>Property</TableHead>
-                    <TableHead className="text-right">Distributed</TableHead>
-                    <TableHead className="text-right">Investors</TableHead>
+                    <TableHead>Distributed</TableHead>
+                    <TableHead>Investors</TableHead>
                     <TableHead>Date</TableHead>
                   </TableRow>
                 </TableHeader>
@@ -186,10 +199,10 @@ export default function RentManagementPage() {
                         <TableCell className="text-xs">
                           {d.property_name ?? `#${d.property_id}`}
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-xs">
+                        <TableCell className="tabular-nums text-xs">
                           {(Number(d.total_distributed) / 1e18).toFixed(4)} ETH
                         </TableCell>
-                        <TableCell className="text-right tabular-nums text-xs">
+                        <TableCell className="tabular-nums text-xs">
                           {d.investor_count}
                         </TableCell>
                         <TableCell className="text-xs text-muted-foreground">
@@ -208,38 +221,6 @@ export default function RentManagementPage() {
   );
 }
 
-function Stat({
-  title,
-  value,
-  icon: Icon,
-  loading,
-}: {
-  title: string;
-  value: string;
-  icon: React.ComponentType<{ className?: string }>;
-  loading?: boolean;
-}) {
-  return (
-    <Card>
-      <CardContent className="flex items-start justify-between gap-3 p-4">
-        <div className="flex flex-col">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            {title}
-          </span>
-          {loading ? (
-            <Skeleton className="mt-1.5 h-7 w-24" />
-          ) : (
-            <span className="mt-1 text-xl font-semibold tabular-nums">{value}</span>
-          )}
-        </div>
-        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-primary/10 text-primary">
-          <Icon className="h-4 w-4" />
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 function PropertiesRentTable({
   properties,
   loading,
@@ -252,9 +233,9 @@ function PropertiesRentTable({
       <TableHeader>
         <TableRow className="hover:bg-transparent">
           <TableHead>Property</TableHead>
-          <TableHead className="text-right">Monthly Rent</TableHead>
+          <TableHead>Monthly Rent</TableHead>
           <TableHead>Status</TableHead>
-          <TableHead className="text-right">Actions</TableHead>
+          <TableHead>Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -308,7 +289,7 @@ function PropertyRentRow({ property }: { property: Property }) {
           <span className="text-xs text-muted-foreground">{property.location}</span>
         </div>
       </TableCell>
-      <TableCell className="text-right tabular-nums">
+      <TableCell className="tabular-nums">
         {monthly > 0 ? `${monthly.toFixed(4)} ETH` : <span className="text-muted-foreground">Not set</span>}
       </TableCell>
       <TableCell>
@@ -318,8 +299,8 @@ function PropertyRentRow({ property }: { property: Property }) {
           <Badge variant="warning">Not deployed</Badge>
         )}
       </TableCell>
-      <TableCell className="text-right">
-        <div className="flex justify-end gap-1.5">
+      <TableCell>
+        <div className="flex gap-1.5">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
               <Button size="sm" variant="outline" className="h-7 px-2 text-xs">

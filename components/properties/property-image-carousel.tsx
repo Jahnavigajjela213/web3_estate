@@ -2,8 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { motion } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
-import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { pickColor } from "@/lib/charts";
 
@@ -40,10 +38,6 @@ export function PropertyImageCarousel({
     return () => window.clearInterval(timer);
   }, [hasMultiple, paused, safeImages.length]);
 
-  function go(delta: number) {
-    setIndex((value) => (value + delta + safeImages.length) % safeImages.length);
-  }
-
   return (
     <motion.div
       className={cn("relative h-36 overflow-hidden", className)}
@@ -63,46 +57,26 @@ export function PropertyImageCarousel({
           className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.02]"
         />
       ) : null}
-      <div className="absolute inset-0 bg-gradient-to-t from-card via-card/45 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-background/20 via-transparent to-transparent" />
 
       {hasMultiple ? (
-        <>
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            className="absolute left-2 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full bg-background/80"
-            onClick={(event) => {
-              event.stopPropagation();
-              go(-1);
-            }}
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            size="icon"
-            className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full bg-background/80"
-            onClick={(event) => {
-              event.stopPropagation();
-              go(1);
-            }}
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
-          <div className="absolute bottom-2 right-3 flex gap-1">
-            {safeImages.map((_, dotIndex) => (
-              <span
-                key={dotIndex}
-                className={cn(
-                  "h-1.5 rounded-full bg-white/60 transition-all",
-                  dotIndex === index ? "w-4 bg-white" : "w-1.5",
-                )}
-              />
-            ))}
-          </div>
-        </>
+        <div className="absolute bottom-2 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/35 px-2 py-1 backdrop-blur">
+          {safeImages.map((_, dotIndex) => (
+            <button
+              type="button"
+              key={dotIndex}
+              aria-label={`Show image ${dotIndex + 1}`}
+              className={cn(
+                "h-1.5 rounded-full bg-white/70 transition-all shadow-sm",
+                dotIndex === index ? "w-5 bg-white" : "w-1.5 hover:bg-white",
+              )}
+              onClick={(event) => {
+                event.stopPropagation();
+                setIndex(dotIndex);
+              }}
+            />
+          ))}
+        </div>
       ) : null}
 
       {children}

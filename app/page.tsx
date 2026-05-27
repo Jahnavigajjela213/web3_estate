@@ -3,7 +3,17 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import { ArrowRight, Building2, ShieldCheck, Coins, BarChart2 } from "lucide-react";
+import {
+  ArrowRight,
+  BarChart2,
+  Building2,
+  CheckCircle2,
+  Coins,
+  Network,
+  ShieldCheck,
+  Sparkles,
+  Wallet,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -21,6 +31,31 @@ const ROLE_OPTIONS: { id: Role; title: string; description: string }[] = [
   { id: "tenant", title: "Tenant", description: "Rent a property and pay monthly rent on-chain." },
   { id: "property_owner", title: "Property Owner", description: "List and manage real estate properties." },
 ];
+
+const HERO_STATS = [
+  { value: "Sepolia", label: "Public testnet" },
+  { value: "ERC-20", label: "Fractional shares" },
+  { value: "JWT", label: "Wallet sessions" },
+] as const;
+
+const TRUST_POINTS = [
+  "MetaMask signatures prove identity without passwords.",
+  "Smart contracts keep ownership and rent flows verifiable.",
+  "Dashboards stay fast with backend APIs and PostgreSQL data.",
+] as const;
+
+const FEATURE_GRID = [
+  { icon: Building2, label: "Tokenized properties", detail: "Turn real estate into traceable digital assets." },
+  { icon: Coins, label: "Rent distribution", detail: "Route rental income to token holders transparently." },
+  { icon: ShieldCheck, label: "Wallet auth", detail: "Secure login through signed MetaMask challenges." },
+  { icon: BarChart2, label: "Live analytics", detail: "Portfolio, rental, and transaction insights in one UI." },
+] as const;
+
+const PROCESS_STEPS = [
+  { label: "Connect wallet", icon: Wallet },
+  { label: "Choose role", icon: Sparkles },
+  { label: "Use dashboard", icon: Network },
+] as const;
 
 export default function LandingPage() {
   const router = useRouter();
@@ -83,22 +118,25 @@ export default function LandingPage() {
 
   return (
     <div className="relative min-h-screen overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-30 [mask-image:radial-gradient(ellipse_at_center,white,transparent_70%)]" />
-      <div className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-[500px] w-[800px] -translate-x-1/2 rounded-full bg-primary/15 blur-3xl" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_left,hsl(var(--primary)/0.18),transparent_34%),radial-gradient(circle_at_85%_20%,hsl(var(--chart-2)/0.16),transparent_30%),linear-gradient(to_bottom,hsl(var(--background)),hsl(var(--background)))]" />
+      <div className="pointer-events-none absolute inset-0 -z-10 bg-grid opacity-25 [mask-image:linear-gradient(to_bottom,white,transparent_72%)]" />
 
-      <header className="flex items-center justify-between px-6 py-5 md:px-10">
-        <div className="flex items-center gap-2.5">
-          <div className="grid h-9 w-9 place-items-center rounded-lg bg-gradient-to-br from-primary to-chart-2 font-bold text-primary-foreground">
+      <header className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5 md:px-8">
+        <div className="flex items-center gap-3">
+          <div className="grid h-10 w-10 place-items-center rounded-2xl bg-gradient-to-br from-primary via-chart-3 to-chart-2 font-bold text-primary-foreground shadow-lg shadow-primary/20">
             E
           </div>
-          <span className="text-base font-semibold">EstateChain</span>
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold md:text-base">EstateChain</span>
+            <span className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Real Estate Web3</span>
+          </div>
         </div>
         <div className="flex items-center gap-3">
           <a
             href="https://sepolia.etherscan.io"
             target="_blank"
             rel="noreferrer"
-            className="hidden text-xs text-muted-foreground hover:text-foreground sm:inline"
+            className="hidden rounded-full border border-border/70 bg-card/70 px-3 py-1.5 text-xs text-muted-foreground shadow-sm backdrop-blur transition hover:border-primary/30 hover:text-foreground sm:inline"
           >
             Sepolia explorer
           </a>
@@ -106,56 +144,90 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-6xl gap-12 px-6 pb-24 pt-12 md:grid-cols-[1.2fr_1fr] md:gap-16 md:pt-20 md:pb-32">
+      <main className="mx-auto grid max-w-7xl gap-8 px-6 pb-16 pt-8 lg:grid-cols-[minmax(0,1.14fr)_minmax(380px,0.86fr)] lg:px-8 lg:pb-24 lg:pt-14">
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4 }}
           className="flex flex-col"
         >
-          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-            <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Live on Ethereum Sepolia
+          <span className="inline-flex w-fit items-center gap-2 rounded-full border border-primary/20 bg-primary/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.22em] text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_18px_hsl(var(--primary))]" />
+            Live on Ethereum Sepolia
           </span>
-          <h1 className="mt-6 text-balance text-4xl font-semibold leading-[1.05] tracking-tight md:text-6xl">
-            Tokenized real estate, <span className="text-primary">on-chain rent.</span>
+          <h1 className="mt-7 max-w-4xl text-balance text-5xl font-semibold leading-[0.98] tracking-tight md:text-7xl">
+            Real estate ownership, rent, and trust
+            <span className="block bg-gradient-to-r from-primary via-chart-3 to-chart-2 bg-clip-text text-transparent">
+              redesigned for Web3.
+            </span>
           </h1>
-          <p className="mt-5 max-w-xl text-balance text-base text-muted-foreground md:text-lg">
-            EstateChain turns properties into fractional ERC-20 tokens, and pays rent directly to investors
-            through a single rent contract. No intermediaries, no spreadsheets — just on-chain ownership.
+          <p className="mt-6 max-w-2xl text-balance text-base leading-8 text-muted-foreground md:text-lg">
+            EstateChain connects MetaMask identity, smart contracts, backend verification, and role-based dashboards
+            into a single premium workflow for owners, investors, and tenants.
           </p>
-          <ul className="mt-8 grid max-w-xl gap-3 text-sm md:grid-cols-2">
-            {[
-              { icon: Building2, label: "Property tokenization" },
-              { icon: Coins, label: "Automatic rent distribution" },
-              { icon: ShieldCheck, label: "Wallet-based authentication" },
-              { icon: BarChart2, label: "Live portfolio analytics" },
-            ].map((f) => (
-              <li
-                key={f.label}
-                className="flex items-center gap-2.5 rounded-md border border-border bg-card px-3 py-2"
-              >
-                <f.icon className="h-4 w-4 text-primary" />
-                <span className="text-foreground/90">{f.label}</span>
-              </li>
+
+          <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
+            {HERO_STATS.map((stat) => (
+              <div key={stat.label} className="glass-panel rounded-2xl px-4 py-3">
+                <div className="text-lg font-semibold tracking-tight">{stat.value}</div>
+                <div className="mt-1 text-xs text-muted-foreground">{stat.label}</div>
+              </div>
             ))}
-          </ul>
+          </div>
+
+          <div className="mt-8 grid max-w-3xl gap-3 md:grid-cols-2">
+            {FEATURE_GRID.map((feature) => (
+              <div key={feature.label} className="group rounded-2xl border border-border/70 bg-card/70 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5">
+                <div className="flex items-center gap-3">
+                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
+                    <feature.icon className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-sm font-semibold">{feature.label}</div>
+                    <div className="mt-1 text-xs leading-5 text-muted-foreground">{feature.detail}</div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mt-8 flex max-w-2xl flex-col gap-3 rounded-3xl border border-border/70 bg-card/50 p-4 backdrop-blur md:flex-row md:items-center md:justify-between">
+            {PROCESS_STEPS.map((step, index) => (
+              <div key={step.label} className="flex items-center gap-3">
+                <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background">
+                  <step.icon className="h-4 w-4" />
+                </div>
+                <div className="text-sm font-medium">{step.label}</div>
+                {index < PROCESS_STEPS.length - 1 && (
+                  <ArrowRight className="hidden h-4 w-4 text-muted-foreground md:block" />
+                )}
+              </div>
+            ))}
+          </div>
         </motion.section>
 
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.05 }}
-          className="rounded-2xl border border-border bg-card/80 p-6 shadow-2xl shadow-black/5 backdrop-blur md:p-7"
+          className="glass-strong relative overflow-hidden rounded-[2rem] p-6 md:p-7"
         >
+          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-chart-2/20 blur-3xl" />
+
           {view === "connect" && (
-            <div className="flex flex-col gap-4">
+            <div className="relative flex flex-col gap-5">
               <div>
-                <h2 className="text-xl font-semibold tracking-tight">Sign in with your wallet</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  We use a MetaMask signature as your identity. No passwords, no gas.
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  Secure wallet login
+                </span>
+                <h2 className="mt-4 text-2xl font-semibold tracking-tight">Start with MetaMask</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
+                  Sign a one-time challenge to unlock your dashboard. Your private key never leaves your wallet.
                 </p>
               </div>
-              <Button onClick={handleConnect} disabled={busy} size="lg" className="gap-2">
+              <Button onClick={handleConnect} disabled={busy} size="lg" className="h-12 gap-2 rounded-2xl">
                 <MetaMaskIcon size={18} />
                 {busy ? "Awaiting signature…" : "Connect with MetaMask"}
               </Button>
@@ -164,23 +236,30 @@ export default function LandingPage() {
                   {error}
                 </p>
               )}
-              <ul className="mt-2 space-y-1.5 text-xs text-muted-foreground">
-                <li>• You'll sign a one-time message. Nothing is broadcast on-chain.</li>
-                <li>• Your wallet is your identity. Roles are bound at sign-up.</li>
-                <li>• Network: Sepolia (chainId 11155111).</li>
+              <ul className="grid gap-3 text-sm text-muted-foreground">
+                {TRUST_POINTS.map((point) => (
+                  <li key={point} className="flex gap-3 rounded-2xl border border-border/60 bg-background/40 p-3">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
+                    <span>{point}</span>
+                  </li>
+                ))}
               </ul>
             </div>
           )}
 
           {view === "register" && (
-            <div className="flex flex-col gap-4">
+            <div className="relative flex flex-col gap-5">
               <div>
-                <h2 className="text-xl font-semibold tracking-tight">Welcome to EstateChain</h2>
-                <p className="mt-1 text-sm text-muted-foreground">
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
+                  <Sparkles className="h-3.5 w-3.5" />
+                  Account setup
+                </span>
+                <h2 className="mt-4 text-2xl font-semibold tracking-tight">Choose your workspace</h2>
+                <p className="mt-2 text-sm leading-6 text-muted-foreground">
                   Pick how you'll use the platform. This choice is bound to your wallet.
                 </p>
               </div>
-              <div className="rounded-md border border-border bg-muted/40 px-3 py-2 font-mono text-xs">
+              <div className="rounded-2xl border border-border/70 bg-background/50 px-4 py-3 font-mono text-xs">
                 {shortAddress(pendingWallet, 8, 6)}
               </div>
               <div className="flex flex-col gap-2">
@@ -192,10 +271,10 @@ export default function LandingPage() {
                       type="button"
                       onClick={() => setRole(opt.id)}
                       className={cn(
-                        "flex flex-col gap-1 rounded-lg border px-3 py-3 text-left transition-colors",
+                        "flex flex-col gap-1 rounded-2xl border px-4 py-3 text-left transition-all",
                         active
-                          ? "border-primary bg-primary/5"
-                          : "border-border bg-card hover:bg-muted",
+                          ? "border-primary bg-primary/10 shadow-lg shadow-primary/10"
+                          : "border-border/70 bg-background/40 hover:border-primary/30 hover:bg-muted/60",
                       )}
                     >
                       <span className="text-sm font-medium">{opt.title}</span>
@@ -212,10 +291,11 @@ export default function LandingPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="you@example.com"
+                  className="h-11 rounded-2xl"
                 />
               </div>
               <div className="flex flex-col gap-2">
-                <Button onClick={handleRegister} disabled={busy || !role} size="lg">
+                <Button onClick={handleRegister} disabled={busy || !role} size="lg" className="h-12 rounded-2xl">
                   {busy ? "Signing…" : "Create Account"}
                   {!busy && <ArrowRight className="h-4 w-4" />}
                 </Button>
@@ -241,16 +321,19 @@ export default function LandingPage() {
           )}
 
           {view === "redirect" && (
-            <div className="flex flex-col items-start gap-2">
-              <h2 className="text-xl font-semibold tracking-tight">Signed in</h2>
+            <div className="relative flex flex-col items-start gap-2">
+              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-success/15 text-success">
+                <CheckCircle2 className="h-6 w-6" />
+              </div>
+              <h2 className="mt-2 text-xl font-semibold tracking-tight">Signed in</h2>
               <p className="text-sm text-muted-foreground">Redirecting to your dashboard…</p>
             </div>
           )}
         </motion.section>
       </main>
 
-      <footer className="border-t border-border/60 px-6 py-5 text-xs text-muted-foreground md:px-10">
-        <div className="mx-auto flex max-w-6xl flex-col items-start justify-between gap-2 md:flex-row md:items-center">
+      <footer className="border-t border-border/60 px-6 py-5 text-xs text-muted-foreground md:px-8">
+        <div className="mx-auto flex max-w-7xl flex-col items-start justify-between gap-2 md:flex-row md:items-center">
           <span>© {new Date().getFullYear()} EstateChain — Tokenized real estate on Sepolia.</span>
           <span className="font-mono">chainId 0xaa36a7</span>
         </div>

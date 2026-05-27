@@ -1,7 +1,7 @@
 "use client";
 
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { api, getApiBase, getToken } from "./api";
+import { api, clearSession, getApiBase, getToken } from "./api";
 import { queryKeys } from "./queries";
 import type { Property } from "./types";
 
@@ -78,11 +78,14 @@ export function useCreatePropertyStream() {
         signal,
       });
       if (!res.ok) {
+        if (res.status === 401) {
+          clearSession();
+        }
         const errText = await res.text().catch(() => "");
-        let detail = `HTTP ${res.status}`;
+        let detail = res.status === 401 ? "Session expired. Please reconnect your wallet and try again." : `HTTP ${res.status}`;
         try {
           const parsed = JSON.parse(errText);
-          if (parsed?.detail) detail = String(parsed.detail);
+          if (parsed?.detail && res.status !== 401) detail = String(parsed.detail);
         } catch {
           if (errText) detail = errText;
         }

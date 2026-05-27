@@ -344,10 +344,10 @@ export function CreatePropertyDialog() {
           if (chat && !chat.disabled) e.preventDefault();
         }}
       >
-        <DialogHeader className="border-b border-border/60 px-6 pb-3 pt-5">
-          <DialogTitle>Create Property</DialogTitle>
-          <DialogDescription>
-            The platform will deploy the token and sync the rent setup after creation.
+        <DialogHeader className="border-b border-border/60 px-4 pb-4 pt-4">
+          <DialogTitle className="text-base">Create property</DialogTitle>
+          <DialogDescription className="text-sm">
+            Token deploys automatically and rent setup syncs after creation.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -422,11 +422,6 @@ export function CreatePropertyDialog() {
               />
             </PropertyFormField>
           </div>
-          <p className="-mt-1 break-words text-xs text-muted-foreground">
-            {tokenPriceEth > 0
-              ? `${formatTokenPriceEth(tokenPriceEth)} per token (total value ÷ supply).`
-              : "Enter total value in ETH and token supply to calculate price."}
-          </p>
           <PropertyFormField label="Monthly Rent (ETH, optional)">
             <Input
               data-workflow-field="CREATE_PROPERTY.monthly_rent_eth"
@@ -459,7 +454,7 @@ export function CreatePropertyDialog() {
                   }}
                 />
               </div>
-              <ul className="space-y-1.5 text-xs">
+              <ul className="space-y-1.5 text-sm">
                 {CREATE_STEPS.map((step, index) => {
                   const isCompleted = index < completedCount;
                   const isActive = index === activeStepIdx;
@@ -501,11 +496,11 @@ export function CreatePropertyDialog() {
             </div>
           )}
           <DialogFooter className={propertyDialogFooterClass}>
-            <Button type="button" variant="outline" size="sm" onClick={() => setOpen(false)}>
+            <Button type="button" variant="outline" className="h-11 min-w-44 rounded-xl text-sm" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button type="submit" size="sm" disabled={create.isPending}>
-              {create.isPending ? "Creating…" : "Create"}
+            <Button type="submit" className="h-11 min-w-44 rounded-xl text-sm shadow-lg shadow-primary/20" disabled={create.isPending}>
+              {create.isPending ? "Creating…" : "Create Property"}
             </Button>
           </DialogFooter>
         </form>

@@ -14,7 +14,7 @@ export function AmbientSystemPulse({ className }: { className?: string }) {
   return (
     <div
       className={cn(
-        "hidden items-center gap-2 rounded-full border border-border/60 bg-card/50 px-2.5 py-1 text-[10px] text-muted-foreground backdrop-blur-sm md:flex",
+        "hidden items-center gap-2 rounded-full border border-transparent bg-transparent px-2.5 py-1 text-xs text-muted-foreground md:flex",
         className,
       )}
       title="Ambient platform health"

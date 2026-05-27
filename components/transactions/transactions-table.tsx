@@ -58,13 +58,21 @@ const TYPE_META: Record<string, { color: string; icon: React.ComponentType<{ cla
   default: { color: "bg-muted text-muted-foreground", icon: Receipt, label: "Transaction" },
 };
 
-function statusBadge(status?: string) {
+function statusBadge(status?: string, className?: string) {
   const s = (status || "").toLowerCase();
   if (s === "completed" || s === "confirmed" || s === "success")
-    return <Badge variant="success">Completed</Badge>;
-  if (s === "pending" || s === "queued") return <Badge variant="warning">Pending</Badge>;
-  if (s === "failed" || s === "reverted") return <Badge variant="destructive">Failed</Badge>;
-  return <Badge variant="muted">{status || "—"}</Badge>;
+    return <Badge variant="success" className={className}>Completed</Badge>;
+  if (s === "pending" || s === "queued") return <Badge variant="warning" className={className}>Pending</Badge>;
+  if (s === "failed" || s === "reverted") return <Badge variant="destructive" className={className}>Failed</Badge>;
+  return <Badge variant="muted" className={className}>{status || "—"}</Badge>;
+}
+
+function formatEthCompact(value?: string | number | null) {
+  if (value === null || value === undefined || value === "") return "—";
+  const raw = Number(value);
+  if (!Number.isFinite(raw)) return "—";
+  const eth = Math.abs(raw) > 1_000_000 ? raw / 1e18 : raw;
+  return `${eth.toFixed(5).replace(/\.?0+$/, "") || "0"} ETH`;
 }
 
 export function TransactionsTable({
@@ -76,42 +84,116 @@ export function TransactionsTable({
 }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [propertyFilter, setPropertyFilter] = useState("all");
   const [active, setActive] = useState<Transaction | null>(null);
 
+  const typeOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const transaction of transactions) {
+      if (!transaction.type) continue;
+      map.set(transaction.type, (TYPE_META[transaction.type] || TYPE_META.default).label);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [transactions]);
+
+  const propertyOptions = useMemo(() => {
+    const set = new Set<string>();
+    for (const transaction of transactions) {
+      const property = transaction.property_name || (transaction.property_id ? `#${transaction.property_id}` : "");
+      if (property) set.add(property);
+    }
+    return Array.from(set).sort((a, b) => a.localeCompare(b));
+  }, [transactions]);
+
   const filtered = useMemo(() => {
-    if (!search.trim()) return transactions;
     const q = search.toLowerCase();
     return transactions.filter(
-      (t) =>
-        t.tx_hash?.toLowerCase().includes(q) ||
-        t.wallet_address?.toLowerCase().includes(q) ||
-        t.property_name?.toLowerCase().includes(q) ||
-        t.action_label?.toLowerCase().includes(q),
+      (t) => {
+        const property = t.property_name || (t.property_id ? `#${t.property_id}` : "");
+        const matchesSearch =
+          !q.trim() ||
+          t.tx_hash?.toLowerCase().includes(q) ||
+          t.wallet_address?.toLowerCase().includes(q) ||
+          t.property_name?.toLowerCase().includes(q) ||
+          t.action_label?.toLowerCase().includes(q);
+        const matchesType = typeFilter === "all" || t.type === typeFilter;
+        const matchesProperty = propertyFilter === "all" || property === propertyFilter;
+        return matchesSearch && matchesType && matchesProperty;
+      },
     );
-  }, [transactions, search]);
+  }, [transactions, search, typeFilter, propertyFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="flex flex-col gap-3 border-b border-border p-4 md:flex-row md:items-center md:justify-between">
-        <div className="relative w-full max-w-md">
-          <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => {
-              setSearch(e.target.value);
+    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/[0.78] shadow-sm backdrop-blur-2xl">
+      <div className="flex flex-col gap-3 border-b border-border/60 p-4">
+        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
+          <div className="relative w-full xl:max-w-sm">
+            <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                setPage(1);
+              }}
+              placeholder="Search by hash, wallet, property…"
+              className="h-9 rounded-xl pl-8 text-sm"
+            />
+          </div>
+          <select
+            value={typeFilter}
+            onChange={(event) => {
+              setTypeFilter(event.target.value);
               setPage(1);
             }}
-            placeholder="Search by hash, wallet, property…"
-            className="h-9 pl-8 text-sm"
-          />
+            className="h-9 min-w-[180px] rounded-xl border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring"
+          >
+            <option value="all">All transaction types</option>
+            {typeOptions.map(([type, label]) => (
+              <option key={type} value={type}>
+                {label}
+              </option>
+            ))}
+          </select>
+          <select
+            value={propertyFilter}
+            onChange={(event) => {
+              setPropertyFilter(event.target.value);
+              setPage(1);
+            }}
+            className="h-9 min-w-[220px] rounded-xl border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring"
+          >
+            <option value="all">All properties</option>
+            {propertyOptions.map((property) => (
+              <option key={property} value={property}>
+                {property}
+              </option>
+            ))}
+          </select>
+          {(typeFilter !== "all" || propertyFilter !== "all" || search.trim()) ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="h-9 rounded-xl px-3"
+              onClick={() => {
+                setSearch("");
+                setTypeFilter("all");
+                setPropertyFilter("all");
+                setPage(1);
+              }}
+            >
+              Reset filters
+            </Button>
+          ) : null}
+          <span className="text-sm text-muted-foreground xl:ml-auto">
+            {filtered.length} transaction{filtered.length === 1 ? "" : "s"}
+          </span>
         </div>
-        <span className="text-xs text-muted-foreground">
-          {filtered.length} transaction{filtered.length === 1 ? "" : "s"}
-        </span>
       </div>
 
       <Table>
@@ -156,7 +238,7 @@ export function TransactionsTable({
                       <span className={cn("grid h-7 w-7 place-items-center rounded-md", meta.color)}>
                         <Icon className="h-3.5 w-3.5" />
                       </span>
-                      <span className="text-xs font-medium">{meta.label}</span>
+                      <span className="text-sm font-medium">{meta.label}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -164,15 +246,15 @@ export function TransactionsTable({
                       {t.property_name || (t.property_id ? `#${t.property_id}` : "—")}
                     </span>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="font-mono text-sm">
                     {t.wallet_address ? shortAddress(t.wallet_address, 6, 4) : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     <span className="text-sm font-medium">{t.display_amount}</span>
-                    <span className="ml-1 text-xs text-muted-foreground">{t.amount_unit}</span>
+                    <span className="ml-1 text-sm text-muted-foreground">{t.amount_unit}</span>
                   </TableCell>
-                  <TableCell>{statusBadge(t.status)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatDateTime(t.timestamp)}</TableCell>
+                  <TableCell>{statusBadge(t.status, "text-sm")}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{formatDateTime(t.timestamp)}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" className="h-7 w-7">
                       <ArrowUpRight className="h-3.5 w-3.5" />
@@ -185,7 +267,7 @@ export function TransactionsTable({
         </TableBody>
       </Table>
 
-      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 border-t border-border/60 px-4 py-3 text-xs text-muted-foreground">
         <span>
           Page {safePage} / {totalPages}
         </span>
@@ -221,6 +303,7 @@ function TransactionDialog({ tx, onClose }: { tx: Transaction | null; onClose: (
   if (!tx) return null;
   const meta = TYPE_META[tx.type] || TYPE_META.default;
   const Icon = meta.icon;
+  const walletDisplay = tx.wallet_address ? shortAddress(tx.wallet_address, 6, 4).replace("…", "...") : "—";
   return (
     <Dialog open onOpenChange={(o) => (!o ? onClose() : null)}>
       <DialogContent className="max-w-lg">
@@ -229,32 +312,34 @@ function TransactionDialog({ tx, onClose }: { tx: Transaction | null; onClose: (
             <span className={cn("grid h-9 w-9 place-items-center rounded-md", meta.color)}>
               <Icon className="h-4 w-4" />
             </span>
-            <div>
-              <DialogTitle>{meta.label}</DialogTitle>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <DialogTitle>{meta.label}</DialogTitle>
+                {statusBadge(tx.status, "px-2 py-0 text-sm")}
+              </div>
               <DialogDescription>{tx.description}</DialogDescription>
             </div>
           </div>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3 text-sm">
-          <Row label="Status" value={statusBadge(tx.status)} />
           <Row label="Amount" value={`${tx.display_amount} ${tx.amount_unit}`} />
           <Row label="Property" value={tx.property_name || (tx.property_id ? `#${tx.property_id}` : "—")} />
-          <Row label="Wallet" value={tx.wallet_address ? <span className="font-mono text-xs">{tx.wallet_address}</span> : "—"} />
+          <Row label="Wallet" value={<span className="font-mono text-sm">{walletDisplay}</span>} />
           <Row label="Block" value={tx.block_number ?? "—"} />
           <Row label="Date" value={formatDateTime(tx.timestamp)} />
-          {tx.gas_fee ? <Row label="Gas Fee" value={`${tx.gas_fee} ETH`} /> : null}
-          {tx.amount_spent ? <Row label="Amount Spent" value={`${tx.amount_spent} ETH`} /> : null}
-          {tx.remaining_balance ? <Row label="Remaining Balance" value={`${tx.remaining_balance} ETH`} /> : null}
+          {tx.gas_fee ? <Row label="Gas Fee" value={formatEthCompact(tx.gas_fee)} /> : null}
+          {tx.amount_spent ? <Row label="Amount Spent" value={formatEthCompact(tx.amount_spent)} /> : null}
+          {tx.remaining_balance ? <Row label="Remaining Balance" value={formatEthCompact(tx.remaining_balance)} /> : null}
         </div>
         <div className="rounded-md border border-border bg-muted/40 px-3 py-2">
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">Transaction Hash</div>
-          <div className="mt-1 break-all font-mono text-xs">{tx.tx_hash}</div>
+          <div className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Transaction Hash</div>
+          <div className="mt-1 break-all font-mono text-sm">{tx.tx_hash}</div>
         </div>
         <a
           href={txExplorerUrl(tx.tx_hash)}
           target="_blank"
           rel="noreferrer"
-          className="inline-flex w-fit items-center gap-1.5 text-xs font-medium text-primary hover:underline"
+          className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
         >
           View on Etherscan <ExternalLink className="h-3 w-3" />
         </a>
@@ -266,10 +351,10 @@ function TransactionDialog({ tx, onClose }: { tx: Transaction | null; onClose: (
 function Row({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <span>{value}</span>
+      <span className="text-sm">{value}</span>
     </div>
   );
 }

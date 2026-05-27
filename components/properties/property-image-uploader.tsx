@@ -1,6 +1,6 @@
 "use client";
 
-import { ImagePlus, Upload, X } from "lucide-react";
+import { Upload, X } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -57,22 +57,20 @@ export function PropertyImageUploader({ images, onChange }: PropertyImageUploade
           event.currentTarget.classList.remove("border-primary/50", "bg-primary/5");
           void addFiles(event.dataTransfer.files);
         }}
-        className="flex min-w-0 cursor-pointer items-center justify-between gap-3 rounded-lg border border-dashed border-border bg-muted/20 px-3 py-3 transition-colors hover:bg-muted/35"
+        className="flex min-h-36 min-w-0 cursor-pointer flex-col items-center justify-center gap-2.5 rounded-xl border border-dashed border-muted-foreground/45 bg-background/35 px-4 py-4 text-center transition-colors hover:border-primary/60 hover:bg-primary/5 dark:border-slate-600 dark:bg-slate-950/35"
       >
-        <span className="flex min-w-0 items-center gap-3">
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-background text-primary">
-            <ImagePlus className="h-4 w-4" />
+        <span className="flex min-w-0 flex-col items-center gap-1.5">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-2xl text-primary">
+            <Upload className="h-8 w-8 stroke-[1.8]" />
           </span>
           <span className="min-w-0">
-            <span className="block text-sm font-medium">Property images</span>
-            <span className="block truncate text-xs text-muted-foreground">
-              Drag images here or browse. JPG, PNG, WebP or GIF.
+            <span className="block text-sm font-medium">
+              Drag your Image(s) or <span className="text-primary">browse</span>
+            </span>
+            <span className="mt-1 block text-sm text-muted-foreground">
+              JPG, PNG, WebP or GIF
             </span>
           </span>
-        </span>
-        <span className="inline-flex shrink-0 items-center gap-1.5 rounded-md border border-border bg-background px-2.5 py-1 text-xs font-medium">
-          <Upload className="h-3.5 w-3.5" />
-          Upload
         </span>
         <input
           type="file"

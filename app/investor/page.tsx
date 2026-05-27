@@ -66,6 +66,29 @@ export default function InvestorDashboardPage() {
         subtitle="Your holdings, yield, wallet health, and latest on-chain activity"
       />
       <main className="flex-1 space-y-4 p-4 lg:p-6">
+        <section className="relative overflow-hidden rounded-[2rem] border border-border/60 bg-card/[0.72] p-5 shadow-[0_24px_80px_-48px_hsl(var(--foreground)/0.45)] backdrop-blur-2xl md:p-6">
+          <div className="pointer-events-none absolute -right-20 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+          <div className="pointer-events-none absolute -bottom-24 left-1/4 h-56 w-56 rounded-full bg-success/20 blur-3xl" />
+          <div className="relative grid gap-6 xl:grid-cols-[1.2fr_0.8fr] xl:items-end">
+            <div>
+              <Badge variant="outline" className="rounded-full bg-background/50">
+                Investor suite
+              </Badge>
+              <h2 className="mt-4 max-w-3xl text-3xl font-semibold tracking-tight md:text-4xl">
+                Track fractional ownership and rental yield from one wallet.
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-muted-foreground">
+                Your dashboard combines indexed Sepolia transactions, token balances, claimable rent, and portfolio health into a single investor cockpit.
+              </p>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <HeroPill label="Positions" value={String(holdings.length)} loading={portfolio.isLoading} />
+              <HeroPill label="Claimable" value={`${claimable.data?.total_claimable_eth ?? "0"} ETH`} loading={claimable.isLoading} />
+              <HeroPill label="Wallet" value={formatEth(balances.data?.native?.balance ?? "0", { digits: 3 })} loading={balances.isLoading} />
+            </div>
+          </div>
+        </section>
+
         <section className="grid grid-cols-2 gap-3 xl:grid-cols-4">
           <MetricCard title="Portfolio Value" value={formatCurrency(metrics.estimatedValue)} icon={Wallet} loading={loading} sub={`${metrics.propertiesOwned} properties`} />
           <MetricCard title="Tokens Held" value={formatNumber(metrics.totalTokens, 4)} icon={Building2} loading={loading} sub={`${holdings.length} active positions`} />
@@ -214,6 +237,15 @@ export default function InvestorDashboardPage() {
         </section>
       </main>
     </>
+  );
+}
+
+function HeroPill({ label, value, loading }: { label: string; value: string; loading?: boolean }) {
+  return (
+    <div className="rounded-2xl border border-border/70 bg-background/50 p-4 shadow-sm backdrop-blur">
+      <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+      {loading ? <Skeleton className="mt-3 h-7 w-20" /> : <div className="mt-2 truncate text-xl font-semibold tracking-tight">{value}</div>}
+    </div>
   );
 }
 

@@ -10,16 +10,18 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useDeleteProperty } from "@/lib/mutations";
 import { useEditPropertyDialog } from "./edit-property-dialog";
 import { PropertyImageCarousel } from "@/components/properties/property-image-carousel";
+import { PropertyDetailDialog } from "@/components/properties/property-detail-dialog";
 import type { Property } from "@/lib/types";
 import { cn, formatCurrency, formatNumber, percent, shortAddress } from "@/lib/utils";
 import { isWorkflowModalAction, subscribeWorkflowAction, workflowPropertyMatches } from "@/lib/ai/action-executor";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useCurrentWallet } from "@/components/investor/use-current-wallet";
 
 export function PropertyCard({ property }: { property: Property }) {
   const remove = useDeleteProperty();
   const { openEdit } = useEditPropertyDialog();
   const wallet = useCurrentWallet();
+  const [detailOpen, setDetailOpen] = useState(false);
   const canManage = Boolean(
     wallet && property.owner_wallet && property.owner_wallet.toLowerCase() === wallet.toLowerCase(),
   );
@@ -51,33 +53,63 @@ export function PropertyCard({ property }: { property: Property }) {
   }
 
   return (
-    <motion.div
-      layout
-      whileHover={{ y: -2 }}
-      className="group relative flex flex-col overflow-hidden rounded-xl border border-border bg-card shadow-sm"
-    >
-      <PropertyImageCarousel images={property.images} propertyId={property.id} title={property.name} className="h-32 w-full">
-        <div className="absolute left-3 top-3 flex items-center gap-2">
-          <Badge variant="muted" className="font-mono">#{property.id}</Badge>
-          <Badge variant={property.token_address ? "success" : "warning"}>
+    <>
+      <motion.div
+        layout
+        role="button"
+        tabIndex={0}
+        whileHover={{ y: -2 }}
+        className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl border border-border/60 bg-card/[0.82] shadow-[0_20px_60px_-38px_hsl(var(--foreground)/0.45)] backdrop-blur-2xl"
+        onClick={() => setDetailOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setDetailOpen(true);
+          }
+        }}
+      >
+        <PropertyImageCarousel images={property.images?.slice(0, 1)} propertyId={property.id} title={property.name} className="h-44 w-full">
+          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full border border-border/60 bg-background/80 p-1 shadow-sm backdrop-blur">
+            <TooltipProvider delayDuration={150}>
+              <IconAction
+                icon={<Pencil className="h-3.5 w-3.5" />}
+                label="Edit"
+                onClick={() => openEdit(property)}
+              />
+              <IconAction
+                icon={<Archive className="h-3.5 w-3.5" />}
+                label="Archive or delete"
+                busy={remove.isPending}
+                onClick={handleArchive}
+              />
+            </TooltipProvider>
+          </div>
+        </PropertyImageCarousel>
+
+      <div className="flex flex-1 flex-col gap-2.5 p-4">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight">
+            <span className="shrink-0 text-foreground">#{property.id}</span>
+            <h3 className="min-w-0 truncate">{property.name}</h3>
+            <Badge variant="outline" className="shrink-0 rounded-md px-2 py-0 font-mono text-xs">{property.token_symbol}</Badge>
+          </div>
+          <Badge variant={property.token_address ? "success" : "warning"} className="shrink-0">
             {property.token_address ? "Ready" : "Setup pending"}
           </Badge>
         </div>
-        <div className="absolute bottom-3 left-3 right-3">
-          <h3 className="truncate text-base font-semibold leading-tight">{property.name}</h3>
-          <div className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
+        <div>
+          <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
             <MapPin className="h-3 w-3" />
             <span className="truncate">{property.location}</span>
           </div>
         </div>
-      </PropertyImageCarousel>
 
-      <div className="flex flex-1 flex-col gap-3 p-4">
-        <div className="grid grid-cols-2 gap-3 text-xs">
+        <div className="grid grid-cols-2 gap-x-5 gap-y-2 text-xs">
           <Stat label="Total Value" value={formatCurrency(property.total_value)} />
-          <Stat label="Token Symbol" value={property.token_symbol} />
-          <Stat label="Token Supply" value={formatNumber(total)} />
           <Stat label="Token Price" value={`${tokenPriceEth.toFixed(4)} ETH`} />
+          <Stat label="Supply" value={formatNumber(total)} />
+          <Stat label="Available" value={formatNumber(Number(property.tokens_available ?? 0))} />
+          <Stat label="Rent" value={monthlyRentEth > 0 ? `${monthlyRentEth.toFixed(4)} ETH/mo` : "Not set"} />
         </div>
 
         <div>
@@ -97,59 +129,39 @@ export function PropertyCard({ property }: { property: Property }) {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-          {monthlyRentEth > 0 ? (
-            <Badge variant="outline" className="rounded-md">
-              Rent · {monthlyRentEth.toFixed(4)} ETH/mo
-            </Badge>
-          ) : (
-            <Badge variant="muted" className="rounded-md">Rent not set</Badge>
-          )}
           {property.token_address ? (
             <span className="font-mono text-[10px]">{shortAddress(property.token_address, 6, 4)}</span>
           ) : null}
           {property.nft_token_id ? (
-            <Badge variant="outline" className="rounded-md">
+            <Badge variant="outline" className="ml-auto rounded-md">
               <CheckCircle2 className="mr-1 h-3 w-3" /> NFT #{property.nft_token_id}
             </Badge>
           ) : null}
         </div>
 
-        <div className="mt-auto flex items-center justify-between border-t border-border pt-3">
-          <TooltipProvider delayDuration={150}>
-            <div className="flex items-center gap-1">
-              {canManage ? (
-                <>
-                  <IconAction
-                    icon={<Pencil className="h-3.5 w-3.5" />}
-                    label="Edit"
-                    onClick={() => openEdit(property)}
-                  />
-                  <IconAction
-                    icon={<Archive className="h-3.5 w-3.5" />}
-                    label="Archive or delete"
-                    busy={remove.isPending}
-                    onClick={handleArchive}
-                  />
-                </>
-              ) : null}
-            </div>
-          </TooltipProvider>
-          <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
-            Available · {formatNumber(Number(property.tokens_available ?? 0))}
-          </span>
         </div>
-      </div>
-    </motion.div>
+      </motion.div>
+      <PropertyDetailDialog
+        property={property}
+        open={detailOpen}
+        onOpenChange={setDetailOpen}
+        actionLabel={canManage ? "Edit Property" : undefined}
+        onAction={() => {
+          setDetailOpen(false);
+          openEdit(property);
+        }}
+      />
+    </>
   );
 }
 
 function Stat({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="flex flex-col">
+    <div className="min-w-0">
       <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <span className="text-sm font-medium tabular-nums">{value}</span>
+      <span className="mt-0.5 block truncate text-sm font-medium tabular-nums">{value}</span>
     </div>
   );
 }
@@ -173,9 +185,12 @@ function IconAction({
         <Button
           variant={variant === "primary" ? "default" : "ghost"}
           size="icon"
-          className="h-7 w-7"
+          className="h-7 w-7 rounded-full"
           disabled={busy}
-          onClick={onClick}
+          onClick={(event) => {
+            event.stopPropagation();
+            onClick();
+          }}
         >
           {icon}
         </Button>

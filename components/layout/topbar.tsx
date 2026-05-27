@@ -17,12 +17,12 @@ export function AdminTopbar({
   onMenuClick?: () => void;
 }) {
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border/60 bg-background/75 px-4 shadow-elevate backdrop-blur-xl lg:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border/60 bg-card/85 px-4 shadow-[0_10px_40px_-28px_hsl(var(--foreground)/0.55)] backdrop-blur-2xl dark:bg-background/70 lg:px-6">
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden"
+          className="rounded-2xl lg:hidden"
           onClick={onMenuClick}
           aria-label="Open navigation"
         >
@@ -33,7 +33,7 @@ export function AdminTopbar({
           {subtitle ? <span className="text-xs text-muted-foreground">{subtitle}</span> : null}
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
         <AmbientSystemPulse />
         <WalletPill />
         <ThemeToggle />

@@ -10,7 +10,7 @@ export default function TenantTransactionsPage() {
   const transactions = useTenantTransactions(wallet);
   return (
     <>
-      <AdminTopbar title="Transactions" subtitle="Your wallet-scoped rent payments and on-chain activity" />
+      <AdminTopbar title="Payments" subtitle="Your wallet-scoped rent payments and on-chain activity" />
       <main className="flex-1 space-y-4 p-4 lg:p-6">
         <TransactionsTable transactions={transactions.data ?? []} loading={transactions.isLoading} />
       </main>

@@ -114,8 +114,8 @@ export function InvestorsTable({
   const previewLoading = previews.some((p) => p.isLoading);
 
   return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="flex flex-col gap-3 border-b border-border p-4 md:flex-row md:items-center md:justify-between">
+    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/[0.78] shadow-sm backdrop-blur-2xl">
+      <div className="flex flex-col gap-3 border-b border-border/60 p-4 md:flex-row md:items-center md:justify-between">
         <div className="relative w-full max-w-md">
           <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
           <Input
@@ -125,7 +125,7 @@ export function InvestorsTable({
               setPage(1);
             }}
             placeholder="Search by wallet or email…"
-            className="h-9 pl-8 text-sm"
+            className="h-9 rounded-xl pl-8 text-sm"
           />
         </div>
         <span className="text-xs text-muted-foreground">
@@ -136,7 +136,7 @@ export function InvestorsTable({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead>Investor</TableHead>
+            <TableHead className="w-[28%]">Investor</TableHead>
             <TableHead>Email</TableHead>
             <TableHead>KYC</TableHead>
             <TableHead className="text-right">Properties</TableHead>
@@ -169,7 +169,7 @@ export function InvestorsTable({
                 : 0;
               return (
                 <TableRow key={it.wallet} className="cursor-pointer" onClick={() => setActive(it)}>
-                  <TableCell>
+                  <TableCell className="w-[28%]">
                     <div className="flex items-center gap-3">
                       <span
                         className="grid h-8 w-8 place-items-center rounded-full font-mono text-[10px] text-white"
@@ -178,8 +178,8 @@ export function InvestorsTable({
                         {it.wallet.slice(2, 4).toUpperCase()}
                       </span>
                       <div className="flex flex-col">
-                        <span className="font-mono text-xs">{shortAddress(it.wallet, 6, 4)}</span>
-                        <span className="text-[10px] text-muted-foreground">
+                        <span className="font-mono text-sm">{shortAddress(it.wallet, 6, 4)}</span>
+                        <span className="text-xs text-muted-foreground">
                           {it.user?.id ? `Member #${it.user.id}` : "Unregistered"}
                         </span>
                       </div>
@@ -240,12 +240,12 @@ export function InvestorsTable({
   );
 }
 
-function KycBadge({ value }: { value?: string }) {
+function KycBadge({ value, className }: { value?: string; className?: string }) {
   const v = (value || "").toLowerCase();
-  if (v === "approved" || v === "verified") return <Badge variant="success">Verified</Badge>;
-  if (v === "pending") return <Badge variant="warning">Pending</Badge>;
-  if (v === "rejected") return <Badge variant="destructive">Rejected</Badge>;
-  return <Badge variant="muted">—</Badge>;
+  if (v === "approved" || v === "verified") return <Badge variant="success" className={className}>Verified</Badge>;
+  if (v === "pending") return <Badge variant="warning" className={className}>Pending</Badge>;
+  if (v === "rejected") return <Badge variant="destructive" className={className}>Rejected</Badge>;
+  return <Badge variant="muted" className={className}>—</Badge>;
 }
 
 function InvestorDetailsDialog({
@@ -276,7 +276,7 @@ function InvestorDetailsDialog({
         <DialogHeader>
           <div className="flex items-center gap-3">
             <span
-              className="grid h-10 w-10 place-items-center rounded-full font-mono text-xs text-white"
+              className="grid h-10 w-10 place-items-center rounded-full font-mono text-sm text-white"
               style={{ background: pickColor(row.wallet.length) }}
             >
               {row.wallet.slice(2, 4).toUpperCase()}
@@ -291,13 +291,13 @@ function InvestorDetailsDialog({
           </div>
         </DialogHeader>
         <div className="grid grid-cols-2 gap-3">
-          <Pair icon={<Wallet className="h-3.5 w-3.5" />} label="Wallet" value={<span className="font-mono text-xs break-all">{row.wallet}</span>} />
+          <Pair icon={<Wallet className="h-3.5 w-3.5" />} label="Wallet" value={<span className="font-mono text-sm">{shortAddress(row.wallet, 7, 5).replace("…", "...")}</span>} />
           <Pair icon={<Mail className="h-3.5 w-3.5" />} label="Email" value={row.user?.email ?? "—"} />
-          <Pair label="KYC" value={<KycBadge value={row.user?.kyc_status} />} />
+          <Pair label="KYC" value={<KycBadge value={row.user?.kyc_status} className="text-sm" />} />
           <Pair label="Member ID" value={row.user?.id ? `#${row.user.id}` : "Unregistered"} />
         </div>
         <div className="rounded-md border border-border">
-          <div className="flex items-center justify-between border-b border-border px-3 py-2 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <div className="flex items-center justify-between border-b border-border px-3 py-2 text-sm font-semibold uppercase tracking-wider text-muted-foreground">
             <span>Positions</span>
             <span>Ownership</span>
           </div>
@@ -312,14 +312,14 @@ function InvestorDetailsDialog({
                 >
                   <div className="flex min-w-0 items-center gap-3">
                     <span
-                      className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-[10px] font-bold text-white"
+                      className="grid h-7 w-7 shrink-0 place-items-center rounded-md text-sm font-bold text-white"
                       style={{ background: pickColor(p.property.id) }}
                     >
                       {p.property.token_symbol?.slice(0, 2) || "PR"}
                     </span>
                     <div className="flex min-w-0 flex-col">
                       <span className="truncate text-sm font-medium">{p.property.name}</span>
-                      <span className="text-[10px] text-muted-foreground">
+                      <span className="text-sm text-muted-foreground">
                         {tokens != null ? `${formatNumber(tokens)} tokens` : "—"}
                       </span>
                     </div>
@@ -348,7 +348,7 @@ function Pair({
 }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <span className="flex items-center gap-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <span className="flex items-center gap-1 text-sm font-medium uppercase tracking-wider text-muted-foreground">
         {icon}
         {label}
       </span>

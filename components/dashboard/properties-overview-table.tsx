@@ -2,23 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { useQueries } from "@tanstack/react-query";
-import { motion } from "framer-motion";
-import { Building2, ChevronLeft, ChevronRight, MoreHorizontal, Search } from "lucide-react";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Building2, Search } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
-import { Badge } from "@/components/ui/badge";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { api } from "@/lib/api";
-import { cn, formatCurrency, formatNumber, percent, shortAddress } from "@/lib/utils";
+import { cn, formatNumber, shortAddress } from "@/lib/utils";
 import type { Property } from "@/lib/types";
 import { pickColor } from "@/lib/charts";
 
@@ -38,8 +27,6 @@ type PreviewResponse = {
   breakdown: PreviewBreakdownItem[];
 };
 
-const PAGE_SIZE = 5;
-
 export function PropertiesOverviewTable({
   properties,
   loading,
@@ -51,7 +38,6 @@ export function PropertiesOverviewTable({
   onSelectProperty?: (p: Property) => void;
   selectedId?: number | null;
 }) {
-  const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -62,12 +48,8 @@ export function PropertiesOverviewTable({
     );
   }, [properties, search]);
 
-  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
-  const safePage = Math.min(page, totalPages);
-  const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
-
   const previewQueries = useQueries({
-    queries: visible.map((p) => ({
+    queries: filtered.map((p) => ({
       queryKey: ["preview-distribution", p.id],
       queryFn: () => api.get<PreviewResponse>(`/tenant/preview-distribution/${p.id}`),
       enabled: !!p.token_address,
@@ -77,17 +59,14 @@ export function PropertiesOverviewTable({
   });
 
   return (
-    <div className="rounded-xl border border-border bg-card">
-      <div className="flex flex-col gap-3 border-b border-border p-4 md:flex-row md:items-center md:justify-between">
+    <div className="h-full overflow-hidden rounded-2xl border border-border/60 bg-card/[0.78] shadow-sm backdrop-blur-2xl">
+      <div className="flex flex-col gap-3 border-b border-border/60 p-3 md:flex-row md:items-center md:justify-between">
         <div className="flex items-center gap-2">
-          <div className="grid h-8 w-8 place-items-center rounded-md bg-primary/10 text-primary">
+          <div className="grid h-8 w-8 place-items-center rounded-xl bg-primary/10 text-primary">
             <Building2 className="h-4 w-4" />
           </div>
           <div>
-            <h3 className="text-sm font-semibold">Properties Overview</h3>
-            <p className="text-xs text-muted-foreground">
-              Click a row to drill into investor breakdown.
-            </p>
+            <h3 className="text-base font-semibold leading-none tracking-tight">Properties Overview</h3>
           </div>
         </div>
         <div className="flex w-full max-w-xs items-center gap-2">
@@ -97,44 +76,37 @@ export function PropertiesOverviewTable({
               value={search}
               onChange={(e) => {
                 setSearch(e.target.value);
-                setPage(1);
               }}
               placeholder="Search property…"
-              className="h-8 pl-8 text-xs"
+              className="h-8 rounded-xl pl-8 text-xs"
             />
           </div>
         </div>
       </div>
 
-      <Table>
-        <TableHeader>
-          <TableRow className="hover:bg-transparent">
-            <TableHead className="w-10">#</TableHead>
-            <TableHead>Property</TableHead>
-            <TableHead className="text-right">Total Tokens</TableHead>
-            <TableHead className="w-[260px]">Distribution</TableHead>
-            <TableHead className="text-right">Token Price</TableHead>
-            <TableHead>Investors</TableHead>
-            <TableHead className="w-12" />
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {loading && properties.length === 0 ? (
-            Array.from({ length: 4 }).map((_, i) => (
-              <TableRow key={i} className="hover:bg-transparent">
-                <TableCell colSpan={7}>
-                  <Skeleton className="h-10 w-full" />
-                </TableCell>
-              </TableRow>
-            ))
-          ) : visible.length === 0 ? (
-            <TableRow>
-              <TableCell colSpan={7} className="py-10 text-center text-sm text-muted-foreground">
-                No properties to show.
-              </TableCell>
-            </TableRow>
-          ) : (
-            visible.map((p, idx) => {
+      <div className="max-h-[300px] overflow-y-scroll overflow-x-hidden scrollbar-thin">
+        <div className="sticky top-0 z-10 grid grid-cols-[26px_minmax(0,1.5fr)_96px_minmax(88px,0.7fr)_94px_58px] gap-2 border-b border-border bg-card px-4 py-3 text-left text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
+          <span>No</span>
+          <span>Property</span>
+          <span className="whitespace-nowrap">Total Tokens</span>
+          <span>Distribution</span>
+          <span className="whitespace-nowrap">Token Price</span>
+          <span>Investors</span>
+        </div>
+        <div>
+          {loading && properties.length === 0
+            ? Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="border-b border-border px-4 py-3">
+                  <Skeleton className="h-11 w-full" />
+                </div>
+              ))
+            : filtered.length === 0
+              ? (
+                <div className="py-10 text-center text-sm text-muted-foreground">
+                  No properties to show.
+                </div>
+              )
+              : filtered.map((p, idx) => {
               const breakdown = previewQueries[idx]?.data?.breakdown;
               const investorCount = breakdown?.length ?? 0;
               const soldPct = Number(p.sold_percentage ?? 0);
@@ -143,17 +115,20 @@ export function PropertiesOverviewTable({
               const priceEth = p.token_sale_price_eth ?? "0";
               const isSelected = selectedId === p.id;
               return (
-                <TableRow
+                <button
                   key={p.id}
                   data-state={isSelected ? "selected" : undefined}
                   onClick={() => onSelectProperty?.(p)}
-                  className="cursor-pointer"
+                  className={cn(
+                    "grid w-full grid-cols-[26px_minmax(0,1.5fr)_96px_minmax(88px,0.7fr)_94px_58px] items-center gap-2 border-b border-border px-4 py-3 text-left transition-colors hover:bg-muted/40",
+                    isSelected && "bg-muted/60",
+                  )}
                 >
-                  <TableCell className="text-muted-foreground">{(safePage - 1) * PAGE_SIZE + idx + 1}</TableCell>
-                  <TableCell>
+                  <span className="text-sm text-muted-foreground">{idx + 1}</span>
+                  <span>
                     <div className="flex items-center gap-3">
                       <div
-                        className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-xs font-semibold text-white"
+                        className="grid h-8 w-8 shrink-0 place-items-center rounded-xl text-xs font-semibold text-white"
                         style={{ background: pickColor(p.id) }}
                       >
                         {p.token_symbol?.slice(0, 2) || "PR"}
@@ -163,30 +138,17 @@ export function PropertiesOverviewTable({
                         <span className="truncate text-xs text-muted-foreground">{p.location}</span>
                       </div>
                     </div>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  </span>
+                  <span className="text-left text-xs tabular-nums">
                     {formatNumber(tokensTotal)}
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex flex-col gap-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-medium tabular-nums">
-                          {formatNumber(tokensSold)} ({soldPct.toFixed(1)}%)
-                        </span>
-                      </div>
-                      <Progress
-                        value={soldPct}
-                        className="h-1.5"
-                        indicatorClassName={cn(
-                          soldPct >= 60 ? "bg-success" : soldPct >= 30 ? "bg-chart-2" : "bg-chart-4",
-                        )}
-                      />
-                    </div>
-                  </TableCell>
-                  <TableCell className="text-right tabular-nums">
+                  </span>
+                  <span className="text-xs font-medium tabular-nums">
+                    {formatNumber(tokensSold)} ({soldPct.toFixed(1)}%)
+                  </span>
+                  <span className="text-left text-xs tabular-nums">
                     {Number(priceEth).toFixed(4)} ETH
-                  </TableCell>
-                  <TableCell>
+                  </span>
+                  <span className="text-left">
                     <InvestorAvatars
                       breakdown={breakdown}
                       isLoading={previewQueries[idx]?.isLoading && !!p.token_address}
@@ -194,53 +156,10 @@ export function PropertiesOverviewTable({
                       hasRent={Number(p.monthly_rent_eth ?? 0) > 0}
                       count={investorCount}
                     />
-                  </TableCell>
-                  <TableCell>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </TableCell>
-                </TableRow>
+                  </span>
+                </button>
               );
-            })
-          )}
-        </TableBody>
-      </Table>
-
-      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-muted-foreground">
-        <span>
-          Page {safePage} / {totalPages} · {filtered.length} {filtered.length === 1 ? "property" : "properties"}
-        </span>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={safePage <= 1}
-          >
-            <ChevronLeft className="h-3.5 w-3.5" />
-          </Button>
-          {Array.from({ length: totalPages }).map((_, i) => (
-            <Button
-              key={i}
-              variant={i + 1 === safePage ? "default" : "outline"}
-              size="sm"
-              className="h-7 min-w-7 px-2 text-xs"
-              onClick={() => setPage(i + 1)}
-            >
-              {i + 1}
-            </Button>
-          ))}
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-7 w-7"
-            onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-            disabled={safePage >= totalPages}
-          >
-            <ChevronRight className="h-3.5 w-3.5" />
-          </Button>
+            })}
         </div>
       </div>
     </div>
@@ -260,34 +179,37 @@ function InvestorAvatars({
   hasRent: boolean;
   count: number;
 }) {
-  if (!hasToken) return <span className="text-xs text-muted-foreground">No token deployed</span>;
-  if (isLoading) return <Skeleton className="h-6 w-24" />;
-  if (!breakdown || breakdown.length === 0) {
-    return (
-      <span className="text-xs text-muted-foreground">
-        {hasRent ? "No investors yet" : "Set rent to view"}
-      </span>
-    );
-  }
-  const display = breakdown.slice(0, 4);
-  const more = count - display.length;
+  if (isLoading) return <Skeleton className="mx-auto h-5 w-6" />;
   return (
-    <div className="flex items-center -space-x-1.5">
-      {display.map((it) => (
-        <motion.span
-          key={it.investor}
-          whileHover={{ y: -2 }}
-          className="grid h-6 w-6 place-items-center rounded-full border-2 border-card bg-muted font-mono text-[9px]"
-          title={it.investor}
-        >
-          {shortAddress(it.investor, 1, 1).replace("…", "")}
-        </motion.span>
-      ))}
-      {more > 0 ? (
-        <Badge variant="muted" className="ml-2 h-6 rounded-full px-2 text-[10px]">
-          +{more}
-        </Badge>
-      ) : null}
-    </div>
+    <TooltipProvider delayDuration={120}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <span className="inline-flex cursor-default items-center justify-center text-sm font-medium tabular-nums">
+            {count}
+          </span>
+        </TooltipTrigger>
+        <TooltipContent side="top" align="end" className="w-64 p-3">
+          <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Investors
+          </div>
+          {!hasToken || !breakdown || breakdown.length === 0 ? (
+            <div className="text-[11px] text-muted-foreground">
+              {!hasToken ? "No token deployed yet." : hasRent ? "No investors yet." : "Set rent to view investors."}
+            </div>
+          ) : (
+          <div className="max-h-44 space-y-1.5 overflow-y-auto pr-1 scrollbar-thin">
+            {breakdown.map((item) => (
+              <div key={item.investor} className="flex items-center justify-between gap-3">
+                <span className="truncate font-mono text-[11px]">{shortAddress(item.investor, 6, 4)}</span>
+                <span className="shrink-0 text-[11px] tabular-nums text-muted-foreground">
+                  {item.ownership_pct.toFixed(2)}%
+                </span>
+              </div>
+            ))}
+          </div>
+          )}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }

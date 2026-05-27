@@ -47,7 +47,7 @@ export function WalletPill() {
       <DropdownMenuTrigger asChild>
         <button
           type="button"
-          className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-2.5 py-1.5 text-xs font-medium text-foreground/90 transition-colors hover:bg-muted"
+          className="inline-flex items-center gap-2 rounded-full border border-transparent bg-transparent px-2.5 py-1.5 text-xs font-medium text-foreground/90 transition-colors hover:bg-muted/60"
         >
           <MetaMaskIcon size={16} />
           <span className="font-mono tracking-tight">{shortAddress(wallet, 4, 4)}</span>
