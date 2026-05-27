@@ -32,7 +32,9 @@ export function InvestorTopbar({
           />
           <WalletPill className={INVESTOR_TOPBAR_CONTROL_CLASS} />
           <ThemeToggle className={`${INVESTOR_TOPBAR_CONTROL_CLASS} w-[3.25rem]`} />
-          <StatusDot className={`${INVESTOR_TOPBAR_CONTROL_CLASS} w-9`} />
+          <span className={`${INVESTOR_TOPBAR_CONTROL_CLASS} grid w-9 place-items-center`}>
+            <StatusDot />
+          </span>
         </>
       }
     />
