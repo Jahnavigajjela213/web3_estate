@@ -15,9 +15,10 @@ export function coerceApiBaseUrlForBuild(url: string): string {
 
 const ttsEnabledRaw = process.env.NEXT_PUBLIC_WORKFLOW_TTS_ENABLED;
 const ttsGenderRaw = (process.env.NEXT_PUBLIC_WORKFLOW_TTS_GENDER || "female").toLowerCase();
+const defaultApiBaseUrl = "https://estatechain.onrender.com";
 
 export const RUNTIME_CONFIG = {
-  apiBaseUrl: coerceApiBaseUrlForBuild(process.env.NEXT_PUBLIC_API_BASE_URL || ""),
+  apiBaseUrl: coerceApiBaseUrlForBuild(process.env.NEXT_PUBLIC_API_BASE_URL || defaultApiBaseUrl),
   chainId: Number(process.env.NEXT_PUBLIC_CHAIN_ID || 11155111),
   explorerTxBase: process.env.NEXT_PUBLIC_EXPLORER_TX_BASE || "https://sepolia.etherscan.io/tx/",
   /** Read assistant replies aloud (browser Speech Synthesis — pick male/female hints per OS voices). */
