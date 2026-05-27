@@ -14,6 +14,7 @@ import {
   RefreshCw,
   Search,
   Wallet,
+  type LucideIcon,
 } from "lucide-react";
 import {
   Dialog,
@@ -64,7 +65,7 @@ function matchesInvestorTypeFilter(type: string, filter: InvestorTypeFilter) {
   return YIELD_CLAIMED_TYPES.has(type);
 }
 
-const TYPE_META: Record<string, { color: string; icon: React.ComponentType<{ className?: string }>; label: string }> = {
+const TYPE_META: Record<string, { color: string; icon: LucideIcon; label: string }> = {
   investment: { color: "bg-chart-1/15 text-chart-1", icon: Coins, label: "Investment" },
   INVESTMENT_COMPLETED: { color: "bg-chart-1/15 text-chart-1", icon: Coins, label: "Investment" },
   INVESTMENT_FUNDED: { color: "bg-chart-1/15 text-chart-1", icon: Coins, label: "Investment" },

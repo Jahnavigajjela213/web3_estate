@@ -6,18 +6,28 @@ import { ThemeToggle } from "./theme-toggle";
 import { WalletPill } from "./wallet-pill";
 import { StatusDot } from "./status-dot";
 import { AmbientSystemPulse } from "@/components/ai/ambient-system-pulse";
+import { cn } from "@/lib/utils";
 
 export function AdminTopbar({
   title,
   subtitle,
   onMenuClick,
+  className,
+  actions,
 }: {
   title: string;
   subtitle?: string;
   onMenuClick?: () => void;
+  className?: string;
+  actions?: React.ReactNode;
 }) {
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border/60 bg-card/85 px-4 shadow-[0_10px_40px_-28px_hsl(var(--foreground)/0.55)] backdrop-blur-2xl dark:bg-background/70 lg:px-6">
+    <header
+      className={cn(
+        "sticky top-0 z-30 flex h-16 items-center justify-between gap-4 border-b border-border/60 bg-card/85 px-4 shadow-[0_10px_40px_-28px_hsl(var(--foreground)/0.55)] backdrop-blur-2xl dark:bg-background/70 lg:px-6",
+        className,
+      )}
+    >
       <div className="flex items-center gap-3">
         <Button
           variant="ghost"
@@ -34,10 +44,14 @@ export function AdminTopbar({
         </div>
       </div>
       <div className="flex items-center gap-2">
-        <AmbientSystemPulse />
-        <WalletPill />
-        <ThemeToggle />
-        <StatusDot />
+        {actions ?? (
+          <>
+            <AmbientSystemPulse />
+            <WalletPill />
+            <ThemeToggle />
+            <StatusDot />
+          </>
+        )}
       </div>
     </header>
   );

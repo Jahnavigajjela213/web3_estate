@@ -54,20 +54,28 @@ export function PropertyDetailDialog({
   property: initialProperty,
   open,
   onOpenChange,
-  role,
+  role = "property_owner",
   wallet,
   onPrimaryAction,
   primaryDisabled,
   isActiveRental,
+  statusLabel,
+  actionLabel,
+  actionDisabled,
+  onAction,
 }: {
   property: Property | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  role: PropertyDetailRole;
+  role?: PropertyDetailRole;
   wallet?: string | null;
   onPrimaryAction?: () => void;
   primaryDisabled?: boolean;
   isActiveRental?: boolean;
+  statusLabel?: string;
+  actionLabel?: string;
+  actionDisabled?: boolean;
+  onAction?: () => void;
 }) {
   const propertyQuery = useProperty(open ? initialProperty?.id : null);
   const property = propertyQuery.data ?? initialProperty;
@@ -86,12 +94,13 @@ export function PropertyDetailDialog({
   const unitValue = propertyUnitValue(property);
   const rentReady = Boolean(property?.rent_enabled && monthlyRent > 0);
 
-  const primaryLabel =
-    role === "tenant"
+  const effectivePrimaryAction = onPrimaryAction ?? onAction;
+  const effectivePrimaryDisabled = primaryDisabled ?? actionDisabled;
+  const primaryLabel = actionLabel ?? (role === "tenant"
       ? property?.current_cycle_paid
         ? "Rent paid"
         : "Pay rent"
-      : "Edit property";
+      : "Edit property");
 
   const primaryIcon = role === "tenant" ? Receipt : Pencil;
 
@@ -113,7 +122,7 @@ export function PropertyDetailDialog({
           isInvestor
             ? investorPropertyDetailDialogClass
             : cn(
-                "flex min-h-0 max-h-[min(92vh,920px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg sm:rounded-2xl",
+                "flex min-h-0 w-[min(calc(100vw-1rem),640px)] max-w-[640px] max-h-[min(92vh,920px)] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl",
               )
         }
       >
@@ -161,7 +170,11 @@ export function PropertyDetailDialog({
                         </Badge>
                       </div>
                       <div className="mt-1.5 flex flex-wrap items-center gap-2">
-                        {rentReady ? (
+                        {statusLabel ? (
+                          <Badge variant={statusLabel.toLowerCase().includes("not") ? "muted" : "success"} className="text-[10px]">
+                            {statusLabel}
+                          </Badge>
+                        ) : rentReady ? (
                           <Badge variant="success" className="text-[10px]">
                             Rent ready
                           </Badge>
@@ -192,14 +205,16 @@ export function PropertyDetailDialog({
                   />
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  <StatPill
-                    label="Monthly rent"
-                    value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "—"}
-                  />
+                <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
+                  <StatPill label="Monthly rent" value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "—"} />
                   <StatPill label="Property value" value={formatCurrency(property.total_value)} />
                   <StatPill label="Supply" value={formatNumber(supply)} />
                   <StatPill label="Ownership sold" value={`${soldPct.toFixed(1)}%`} />
+                  <StatPill
+                    label="Token price"
+                    value={tokenPrice > 0 ? `${tokenPrice.toFixed(4)} ETH` : "—"}
+                    subValue={unitValue > 0 ? `~${formatCurrency(unitValue)}` : undefined}
+                  />
                 </div>
 
                 <div className="mt-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
@@ -292,14 +307,14 @@ export function PropertyDetailDialog({
                 <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
                   Close
                 </Button>
-                {onPrimaryAction ? (
+                {effectivePrimaryAction ? (
                   <Button
                     type="button"
                     size="sm"
-                    disabled={primaryDisabled}
+                    disabled={effectivePrimaryDisabled}
                     onClick={() => {
                       onOpenChange(false);
-                      onPrimaryAction();
+                      effectivePrimaryAction();
                     }}
                   >
                     {primaryLabel}
@@ -318,11 +333,16 @@ export function PropertyDetailDialog({
   );
 }
 
-function StatPill({ label, value }: { label: string; value: React.ReactNode }) {
+function StatPill({ label, value, subValue }: { label: string; value: React.ReactNode; subValue?: React.ReactNode }) {
   return (
-    <div className="rounded-lg border border-border bg-card px-2.5 py-2 text-center shadow-sm">
-      <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-0.5 truncate text-xs font-semibold tabular-nums">{value}</div>
+    <div className="min-w-0 text-left">
+      <div className="line-clamp-2 text-[11px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-1 truncate text-base font-semibold leading-tight tabular-nums text-foreground">
+        {value}
+      </div>
+      {subValue ? <div className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{subValue}</div> : null}
     </div>
   );
 }

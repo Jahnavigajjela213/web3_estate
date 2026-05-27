@@ -1,5 +1,6 @@
 "use client";
 
+import type { LucideIcon } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 
@@ -107,7 +108,7 @@ export function InvestorKpiCard({
 }: {
   title: string;
   value: string;
-  icon: React.ComponentType<{ className?: string }>;
+  icon: LucideIcon;
   variant: InvestorKpiVariant;
   loading?: boolean;
 }) {
