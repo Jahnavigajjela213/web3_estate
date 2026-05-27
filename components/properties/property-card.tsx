@@ -69,21 +69,23 @@ export function PropertyCard({ property }: { property: Property }) {
         }}
       >
         <PropertyImageCarousel images={property.images?.slice(0, 1)} propertyId={property.id} title={property.name} className="h-44 w-full">
-          <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full border border-border/60 bg-background/80 p-1 shadow-sm backdrop-blur">
-            <TooltipProvider delayDuration={150}>
-              <IconAction
-                icon={<Pencil className="h-3.5 w-3.5" />}
-                label="Edit"
-                onClick={() => openEdit(property)}
-              />
-              <IconAction
-                icon={<Archive className="h-3.5 w-3.5" />}
-                label="Archive or delete"
-                busy={remove.isPending}
-                onClick={handleArchive}
-              />
-            </TooltipProvider>
-          </div>
+          {canManage ? (
+            <div className="absolute right-3 top-3 flex items-center gap-1 rounded-full border border-border/60 bg-background/80 p-1 shadow-sm backdrop-blur">
+              <TooltipProvider delayDuration={150}>
+                <IconAction
+                  icon={<Pencil className="h-3.5 w-3.5" />}
+                  label="Edit"
+                  onClick={() => openEdit(property)}
+                />
+                <IconAction
+                  icon={<Archive className="h-3.5 w-3.5" />}
+                  label="Archive or delete"
+                  busy={remove.isPending}
+                  onClick={handleArchive}
+                />
+              </TooltipProvider>
+            </div>
+          ) : null}
         </PropertyImageCarousel>
 
       <div className="flex flex-1 flex-col gap-2.5 p-4">
@@ -146,10 +148,14 @@ export function PropertyCard({ property }: { property: Property }) {
         open={detailOpen}
         onOpenChange={setDetailOpen}
         actionLabel={canManage ? "Edit Property" : undefined}
-        onAction={() => {
-          setDetailOpen(false);
-          openEdit(property);
-        }}
+        onAction={
+          canManage
+            ? () => {
+                setDetailOpen(false);
+                openEdit(property);
+              }
+            : undefined
+        }
       />
     </>
   );
