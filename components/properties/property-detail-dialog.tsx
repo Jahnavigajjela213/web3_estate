@@ -1,252 +1,410 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { CheckCircle2, MapPin } from "lucide-react";
+import { useState } from "react";
+import { BadgeCheck, Check, Copy, MapPin, Pencil, Receipt } from "lucide-react";
+import { toast } from "sonner";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
-import type { Property } from "@/lib/types";
-import { cn, formatCurrency, formatNumber, percent, shortAddress } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  InvestorPropertyDetailContent,
+  InvestorPropertyDetailFooter,
+} from "@/components/investor/investor-property-detail-content";
+import {
+  investorPropertyDetailDialogClass,
+  investorPropertyDetailScrollBodyClass,
+  propertyDetailScrollBodyClass,
+} from "@/components/properties/property-form-shared";
+import { PropertyImageGallery } from "@/components/properties/property-image-gallery";
+import { availablePropertyTokens, propertyIsInvestable, propertyUnitValue } from "@/components/investor/investor-utils";
+import { useProperty } from "@/lib/queries";
+import { addressExplorerUrl, RUNTIME_CONFIG } from "@/lib/runtime-config";
+import type { Property, Role } from "@/lib/types";
+import { cn, formatCurrency, formatDateTime, formatNumber, percent, shortAddress } from "@/lib/utils";
 
-type PropertyDetailDialogProps = {
-  property: Property & {
-    rent_enabled?: boolean;
-    current_cycle_paid?: boolean;
-    next_rent_due_at?: string | null;
-  };
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  actionLabel?: string;
-  actionDisabled?: boolean;
-  onAction?: () => void;
-  statusLabel?: string;
+export type PropertyDetailRole = Role;
+
+const CHAIN_LABELS: Record<number, string> = {
+  1: "Ethereum Mainnet",
+  11155111: "Sepolia",
 };
 
+function chainLabel(): string {
+  return CHAIN_LABELS[RUNTIME_CONFIG.chainId] ?? `Chain ${RUNTIME_CONFIG.chainId}`;
+}
+
+function propertyDescription(property: Property): string {
+  const location = property.location || "its listed region";
+  const rentNote = property.rent_enabled
+    ? " Rental yield is distributed on-chain to token holders when rent is collected."
+    : " Rent distribution can be enabled once the owner configures monthly rent on-chain.";
+  return `${property.name} is a tokenized real estate listing in ${location}. Ownership is represented by ${property.token_symbol} security tokens on ${chainLabel()}.${rentNote}`;
+}
+
 export function PropertyDetailDialog({
-  property,
+  property: initialProperty,
   open,
   onOpenChange,
-  actionLabel,
-  actionDisabled,
-  onAction,
-  statusLabel,
-}: PropertyDetailDialogProps) {
-  const images = (property.images ?? []).filter(Boolean);
-  const [selectedImage, setSelectedImage] = useState(0);
-  const [paused, setPaused] = useState(false);
-  const sold = Number(property.tokens_sold ?? 0);
-  const supply = Number(property.token_supply ?? 0);
-  const soldPct = Number(property.sold_percentage ?? percent(sold, supply));
-  const tokenPriceEth = Number(property.token_sale_price_eth ?? 0);
-  const monthlyRentEth = Number(property.monthly_rent_eth ?? 0);
-  const totalValue = Number(property.total_value ?? 0);
-  const perTokenValue = supply > 0 ? totalValue / supply : 0;
-  const displayStatus = statusLabel ?? (property.token_address ? "Rent ready" : "Setup pending");
-  const rentConfigured = monthlyRentEth > 0;
-  const currentImage = images[selectedImage] ?? null;
-  const hasMultipleImages = images.length > 1;
-  const footerStatus = rentConfigured
-    ? property.current_cycle_paid
-      ? "Rent is already paid for this cycle."
-      : "Rent is ready for this property."
-    : "Rent has not been configured for this property.";
+  role,
+  wallet,
+  onPrimaryAction,
+  primaryDisabled,
+  isActiveRental,
+}: {
+  property: Property | null;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  role: PropertyDetailRole;
+  wallet?: string | null;
+  onPrimaryAction?: () => void;
+  primaryDisabled?: boolean;
+  isActiveRental?: boolean;
+}) {
+  const propertyQuery = useProperty(open ? initialProperty?.id : null);
+  const property = propertyQuery.data ?? initialProperty;
+  const loading = propertyQuery.isLoading && !property;
+  const isInvestor = role === "investor";
 
-  useEffect(() => {
-    if (open) setSelectedImage(0);
-  }, [open, property.id]);
+  if (!initialProperty && !open) return null;
 
-  useEffect(() => {
-    if (!open || !hasMultipleImages || paused) return;
-    const timer = window.setInterval(() => {
-      setSelectedImage((current) => (current + 1) % images.length);
-    }, 4500);
-    return () => window.clearInterval(timer);
-  }, [open, hasMultipleImages, paused, images.length]);
+  const sold = Number(property?.tokens_sold ?? 0);
+  const supply = Number(property?.token_supply ?? 0);
+  const soldPct = Number(property?.sold_percentage ?? percent(sold, supply));
+  const tokenPrice = Number(property?.token_sale_price_eth ?? 0);
+  const monthlyRent = Number(property?.monthly_rent_eth ?? 0);
+  const available = property ? availablePropertyTokens(property) : 0;
+  const investable = property ? propertyIsInvestable(property) : false;
+  const unitValue = propertyUnitValue(property);
+  const rentReady = Boolean(property?.rent_enabled && monthlyRent > 0);
+
+  const primaryLabel =
+    role === "tenant"
+      ? property?.current_cycle_paid
+        ? "Rent paid"
+        : "Pay rent"
+      : "Edit property";
+
+  const primaryIcon = role === "tenant" ? Receipt : Pencil;
+
+  const footerHint =
+    role === "tenant"
+      ? property?.current_cycle_paid
+        ? property.next_rent_due_at
+          ? `Next rent due ${formatDateTime(property.next_rent_due_at)}.`
+          : "Rent is paid for the current cycle."
+        : rentReady
+          ? "Pay rent via MetaMask to the RentDistribution contract."
+          : "Rent has not been configured for this property."
+      : "Update listing details, images, and pricing from the admin panel.";
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="h-[min(1155px,calc(100vh-1rem))] w-[min(calc(100vw-1rem),580px)] max-w-[580px] overflow-y-auto rounded-[18px] border-border/80 bg-card p-4 shadow-2xl">
-        <div className="space-y-3 pr-6">
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <div className="flex min-w-0 items-center gap-1.5">
-                <span className="shrink-0 text-lg font-semibold leading-none">#{property.id}</span>
-                <h2 className="truncate text-lg font-semibold leading-none">{property.name}</h2>
-                <Badge variant="outline" className="shrink-0 rounded-md px-1.5 py-0 font-mono text-[10px]">
-                  {property.token_symbol}
-                </Badge>
-              </div>
-              <div className="mt-1.5 flex items-center gap-1.5 text-xs text-muted-foreground">
-                <MapPin className="h-3 w-3" />
-                <span className="truncate">{property.location || "Location not set"}</span>
-              </div>
-            </div>
-            <Badge variant={property.token_address ? "success" : "warning"} className="shrink-0 rounded-full px-3 py-1 text-[10px]">
-              {displayStatus}
-            </Badge>
-          </div>
-
+      <DialogContent
+        className={
+          isInvestor
+            ? investorPropertyDetailDialogClass
+            : cn(
+                "flex min-h-0 max-h-[min(92vh,920px)] flex-col gap-0 overflow-hidden p-0 sm:max-w-lg sm:rounded-2xl",
+              )
+        }
+      >
+        {loading || !property ? (
           <div
-            className="relative overflow-hidden rounded-md bg-muted/30"
-            onMouseEnter={() => setPaused(true)}
-            onMouseLeave={() => setPaused(false)}
-          >
-            {currentImage ? (
-              <img src={currentImage} alt={property.name} className="h-[250px] w-full object-cover" />
-            ) : (
-              <div className="grid h-[250px] place-items-center bg-gradient-to-br from-primary/20 to-card text-sm text-muted-foreground">
-                No property image
-              </div>
+            className={cn(
+              isInvestor ? investorPropertyDetailScrollBodyClass : propertyDetailScrollBodyClass,
+              "space-y-4 p-6",
             )}
-            {hasMultipleImages ? (
-              <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1.5 rounded-full bg-background/50 px-2.5 py-1.5 shadow-sm backdrop-blur">
-                {images.map((_, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    aria-label={`Show image ${index + 1}`}
-                    className={cn(
-                      "h-1.5 rounded-full bg-white/75 shadow-sm transition-all",
-                      index === selectedImage ? "w-5 bg-white" : "w-1.5 hover:bg-white",
-                    )}
-                    onClick={() => setSelectedImage(index)}
-                  />
-                ))}
-              </div>
-            ) : null}
+          >
+            <Skeleton className="aspect-[16/10] w-full rounded-xl" />
+            <Skeleton className="h-6 w-2/3" />
+            <Skeleton className="h-32 w-full" />
           </div>
-
-          {hasMultipleImages ? (
-            <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-              {images.map((image, index) => (
-                <button
-                  key={`${image.slice(0, 24)}-${index}`}
-                  type="button"
-                  className={cn(
-                    "h-14 w-24 shrink-0 overflow-hidden rounded-md border bg-muted transition",
-                    index === selectedImage ? "border-primary ring-2 ring-primary/35" : "border-border hover:border-primary/50",
-                  )}
-                  onClick={() => setSelectedImage(index)}
-                >
-                  <img src={image} alt="" className="h-full w-full object-cover" />
-                </button>
-              ))}
+        ) : isInvestor ? (
+          <>
+            <div className={cn(investorPropertyDetailScrollBodyClass, "px-4 py-3.5")}>
+              <InvestorPropertyDetailContent property={property} />
             </div>
-          ) : null}
-
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
-            <StatTile label="Monthly Rent" value={monthlyRentEth > 0 ? `${monthlyRentEth.toFixed(4)} ETH` : "Not set"} />
-            <StatTile label="Property Value" value={formatCurrency(property.total_value)} />
-            <StatTile label="Supply" value={formatNumber(supply)} />
-            <StatTile label="Ownership Sold" value={`${soldPct.toFixed(1)}%`} />
-          </div>
-
-          <div className="rounded-xl border border-border/70 bg-card p-3">
-            <div className="mb-2 flex items-center justify-between text-sm">
-              <span className="text-muted-foreground">Token sale progress</span>
-              <span className="font-semibold tabular-nums text-foreground">
-                {formatNumber(sold)} / {formatNumber(supply)}
-              </span>
-            </div>
-            <Progress value={soldPct} className="h-1.5" />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2">
-            <InfoPanel title="Property Description">
-              <p>
-                {property.name} is a tokenized real estate listing in {property.location || "a key market"}.
-                Ownership is represented by {property.token_symbol} security tokens on Sepolia.
-                Rent distribution can be enabled once the owner configures monthly rent on-chain.
-              </p>
-            </InfoPanel>
-            <InfoPanel title="Property Details">
-              <KeyValue label="Listing ID" value={`#${property.id}`} />
-              <KeyValue label="Token symbol" value={property.token_symbol || "--"} />
-              <KeyValue label="Token price" value={tokenPriceEth > 0 ? `${tokenPriceEth.toFixed(4)} ETH` : "Not set"} />
-              <KeyValue label="Per-token value" value={perTokenValue > 0 ? formatCurrency(perTokenValue) : "--"} />
-              <KeyValue label="Available tokens" value={formatNumber(Number(property.tokens_available ?? 0))} />
-              <KeyValue label="Rent program" value={rentConfigured ? "Enabled" : "Disabled"} />
-            </InfoPanel>
-            <InfoPanel title="Payment Information">
-              <KeyValue label="Payment currency" value="ETH" />
-              <KeyValue label="Payment network" value="Sepolia" />
-              <KeyValue label="Monthly rent" value={rentConfigured ? `${monthlyRentEth.toFixed(4)} ETH` : "--"} />
-              <KeyValue label="Billing cycle" value="Monthly in advance" />
-              <KeyValue label="Cycle status" value={property.current_cycle_paid ? "Paid" : "--"} />
-            </InfoPanel>
-            <InfoPanel title="Smart Contract">
-              <KeyValue label="Security token" value={property.token_address ? shortAddress(property.token_address, 6, 4) : "Not deployed"} mono />
-              <KeyValue label="Property NFT" value={property.nft_token_id ? `#${property.nft_token_id}` : "Not minted"} />
-              <KeyValue label="Token standard" value="ERC-20 SecurityToken" />
-              <KeyValue label="Created by" value={shortAddress(property.owner_wallet, 6, 4) || "Owner"} mono />
-              <KeyValue
-                label="Verified on-chain"
-                value={
-                  property.token_address ? (
-                    <span className="inline-flex items-center gap-1 text-success">
-                      <CheckCircle2 className="h-3 w-3" /> Yes
-                    </span>
-                  ) : (
-                    "Pending"
-                  )
-                }
+            {onPrimaryAction ? (
+              <InvestorPropertyDetailFooter
+                wallet={wallet}
+                investable={investable}
+                disabled={primaryDisabled}
+                onInvest={() => {
+                  onOpenChange(false);
+                  onPrimaryAction();
+                }}
               />
-            </InfoPanel>
-          </div>
+            ) : null}
+          </>
+        ) : (
+          <>
+            <div className={propertyDetailScrollBodyClass}>
+              <div className="p-5 pb-4">
+                <DialogHeader className="space-y-3 p-0 text-left">
+                  <div className="flex flex-wrap items-start justify-between gap-2 pr-6">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <DialogTitle className="text-lg font-semibold leading-tight">
+                          #{property.id} {property.name}
+                        </DialogTitle>
+                        <Badge variant="outline" className="font-mono text-[10px]">
+                          {property.token_symbol}
+                        </Badge>
+                      </div>
+                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                        {rentReady ? (
+                          <Badge variant="success" className="text-[10px]">
+                            Rent ready
+                          </Badge>
+                        ) : (
+                          <Badge variant="muted" className="text-[10px]">
+                            Rent not set
+                          </Badge>
+                        )}
+                        {isActiveRental ? (
+                          <Badge variant="outline" className="text-[10px]">
+                            Active rental
+                          </Badge>
+                        ) : null}
+                      </div>
+                      <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        {property.location || "—"}
+                      </p>
+                    </div>
+                  </div>
+                </DialogHeader>
 
-          <div className="-mx-4 mt-3 flex items-center justify-between gap-3 border-t border-border/70 bg-card px-4 py-3">
-            <span className="min-w-0 truncate text-xs text-muted-foreground">
-              {footerStatus}
-            </span>
-            <div className="flex shrink-0 items-center gap-2">
-              <Button type="button" size="sm" variant="outline" className="min-w-20" onClick={() => onOpenChange(false)}>
-                Close
-              </Button>
-              {actionLabel ? (
-                <Button size="sm" disabled={actionDisabled} onClick={onAction} className="min-w-28">
-                  {actionLabel}
-                </Button>
-              ) : null}
+                <div className="mt-4">
+                  <PropertyImageGallery
+                    images={property.images}
+                    propertyId={property.id}
+                    title={property.name}
+                  />
+                </div>
+
+                <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                  <StatPill
+                    label="Monthly rent"
+                    value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "—"}
+                  />
+                  <StatPill label="Property value" value={formatCurrency(property.total_value)} />
+                  <StatPill label="Supply" value={formatNumber(supply)} />
+                  <StatPill label="Ownership sold" value={`${soldPct.toFixed(1)}%`} />
+                </div>
+
+                <div className="mt-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
+                  <div className="mb-1.5 flex items-center justify-between text-[11px]">
+                    <span className="text-muted-foreground">Token sale progress</span>
+                    <span className="font-semibold tabular-nums">
+                      {formatNumber(sold)} / {formatNumber(supply)}
+                    </span>
+                  </div>
+                  <Progress value={soldPct} className="h-1.5" />
+                </div>
+
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <InfoCard title="Property description">
+                    <p className="text-xs leading-relaxed text-muted-foreground">
+                      {propertyDescription(property)}
+                    </p>
+                  </InfoCard>
+
+                  <InfoCard title="Property details">
+                    <InfoRow label="Listing ID" value={`#${property.id}`} />
+                    <InfoRow label="Token symbol" value={property.token_symbol} />
+                    <InfoRow label="Token price" value={`${tokenPrice.toFixed(4)} ETH`} />
+                    <InfoRow label="Per-token value" value={formatCurrency(unitValue)} />
+                    <InfoRow label="Available tokens" value={formatNumber(available)} />
+                    <InfoRow
+                      label="Rent program"
+                      value={property.rent_enabled ? "Enabled" : "Disabled"}
+                    />
+                  </InfoCard>
+
+                  <InfoCard title="Payment information">
+                    <InfoRow label="Payment currency" value="ETH" />
+                    <InfoRow label="Payment network" value={chainLabel()} />
+                    <InfoRow
+                      label="Monthly rent"
+                      value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "Not configured"}
+                    />
+                    <InfoRow
+                      label="Billing cycle"
+                      value={property.rent_cycle_label || "Monthly in advance"}
+                    />
+                    <InfoRow
+                      label="Cycle status"
+                      value={
+                        property.current_cycle_paid ? "Paid" : property.can_pay_rent ? "Due" : "—"
+                      }
+                    />
+                  </InfoCard>
+
+                  <InfoCard title="Smart contract">
+                    <CopyRow
+                      label="Security token"
+                      value={property.token_address}
+                      fallback="Pending deployment"
+                      explorer={
+                        property.token_address ? addressExplorerUrl(property.token_address) : undefined
+                      }
+                    />
+                    <InfoRow
+                      label="Property NFT"
+                      value={property.nft_token_id != null ? `#${property.nft_token_id}` : "Not minted"}
+                    />
+                    <InfoRow label="Token standard" value="ERC-20 SecurityToken" />
+                    <CopyRow label="Created by" value={property.owner_wallet} fallback="—" mono />
+                    <InfoRow
+                      label="Verified on-chain"
+                      value={
+                        property.token_address ? (
+                          <span className="inline-flex items-center gap-1 text-success">
+                            <BadgeCheck className="h-3.5 w-3.5" /> Yes
+                          </span>
+                        ) : (
+                          "Pending"
+                        )
+                      }
+                    />
+                  </InfoCard>
+                </div>
+              </div>
             </div>
-          </div>
-        </div>
+
+            <Separator />
+
+            <DialogFooter className="flex shrink-0 flex-col gap-2 border-t border-border bg-card/95 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
+              <p className="text-left text-[11px] leading-snug text-muted-foreground sm:max-w-[55%]">
+                {footerHint}
+              </p>
+              <div className="flex w-full shrink-0 gap-2 sm:w-auto">
+                <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+                  Close
+                </Button>
+                {onPrimaryAction ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    disabled={primaryDisabled}
+                    onClick={() => {
+                      onOpenChange(false);
+                      onPrimaryAction();
+                    }}
+                  >
+                    {primaryLabel}
+                    {(() => {
+                      const Icon = primaryIcon;
+                      return <Icon className="h-3.5 w-3.5" />;
+                    })()}
+                  </Button>
+                ) : null}
+              </div>
+            </DialogFooter>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function StatTile({ label, value }: { label: string; value: string | number }) {
+function StatPill({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="min-w-0 rounded-xl border border-border/70 bg-card px-3 py-3 text-center shadow-sm">
-      <div className="truncate text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
-      <div className="mt-1 truncate text-sm font-semibold tabular-nums text-foreground">{value}</div>
+    <div className="rounded-lg border border-border bg-card px-2.5 py-2 text-center shadow-sm">
+      <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="mt-0.5 truncate text-xs font-semibold tabular-nums">{value}</div>
     </div>
   );
 }
 
-function InfoPanel({ title, children }: { title: string; children: React.ReactNode }) {
+function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="min-h-[128px] rounded-lg border border-border/70 bg-muted/15 p-3 text-[11px] leading-relaxed">
-      <h3 className="mb-2 text-xs font-semibold text-foreground">{title}</h3>
-      <div className="space-y-1.5 text-muted-foreground">{children}</div>
+    <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+      <h4 className="text-xs font-semibold text-foreground">{title}</h4>
+      <div className="mt-2 space-y-1.5">{children}</div>
     </div>
   );
 }
 
-function KeyValue({
+function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
+  return (
+    <div className="flex items-start justify-between gap-3 text-xs">
+      <span className="shrink-0 text-muted-foreground">{label}</span>
+      <span className="text-right font-medium text-foreground">{value}</span>
+    </div>
+  );
+}
+
+function CopyRow({
   label,
   value,
+  fallback,
+  explorer,
   mono,
 }: {
   label: string;
-  value: React.ReactNode;
+  value?: string | null;
+  fallback: string;
+  explorer?: string;
   mono?: boolean;
 }) {
+  const [copied, setCopied] = useState(false);
+  const display = value ? shortAddress(value, 8, 6) : fallback;
+
+  async function copy() {
+    if (!value) return;
+    try {
+      await navigator.clipboard.writeText(value);
+      setCopied(true);
+      toast.success("Copied to clipboard");
+      window.setTimeout(() => setCopied(false), 2000);
+    } catch {
+      toast.error("Could not copy");
+    }
+  }
+
   return (
-    <div className="grid grid-cols-[1fr_auto] gap-3">
-      <span>{label}</span>
-      <span className={cn("min-w-0 text-right text-foreground", mono ? "font-mono" : "")}>{value}</span>
+    <div className="flex items-center justify-between gap-2 text-xs">
+      <span className="text-muted-foreground">{label}</span>
+      <div className="flex min-w-0 items-center gap-1">
+        {explorer ? (
+          <a
+            href={explorer}
+            target="_blank"
+            rel="noreferrer"
+            className={cn("truncate font-medium text-primary hover:underline", mono && "font-mono")}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {display}
+          </a>
+        ) : (
+          <span className={cn("truncate font-medium", mono && "font-mono")}>{display}</span>
+        )}
+        {value ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-6 w-6 shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              void copy();
+            }}
+          >
+            {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

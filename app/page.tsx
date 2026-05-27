@@ -9,10 +9,8 @@ import {
   Building2,
   CheckCircle2,
   Coins,
-  Network,
   ShieldCheck,
   Sparkles,
-  Wallet,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,29 +30,11 @@ const ROLE_OPTIONS: { id: Role; title: string; description: string }[] = [
   { id: "property_owner", title: "Property Owner", description: "List and manage real estate properties." },
 ];
 
-const HERO_STATS = [
-  { value: "Sepolia", label: "Public testnet" },
-  { value: "ERC-20", label: "Fractional shares" },
-  { value: "JWT", label: "Wallet sessions" },
-] as const;
-
-const TRUST_POINTS = [
-  "MetaMask signatures prove identity without passwords.",
-  "Smart contracts keep ownership and rent flows verifiable.",
-  "Dashboards stay fast with backend APIs and PostgreSQL data.",
-] as const;
-
 const FEATURE_GRID = [
-  { icon: Building2, label: "Tokenized properties", detail: "Turn real estate into traceable digital assets." },
-  { icon: Coins, label: "Rent distribution", detail: "Route rental income to token holders transparently." },
-  { icon: ShieldCheck, label: "Wallet auth", detail: "Secure login through signed MetaMask challenges." },
-  { icon: BarChart2, label: "Live analytics", detail: "Portfolio, rental, and transaction insights in one UI." },
-] as const;
-
-const PROCESS_STEPS = [
-  { label: "Connect wallet", icon: Wallet },
-  { label: "Choose role", icon: Sparkles },
-  { label: "Use dashboard", icon: Network },
+  { icon: Building2, label: "Property tokenization" },
+  { icon: Coins, label: "Automatic rent distribution" },
+  { icon: ShieldCheck, label: "Wallet-based authentication" },
+  { icon: BarChart2, label: "Live portfolio analytics" },
 ] as const;
 
 export default function LandingPage() {
@@ -144,7 +124,7 @@ export default function LandingPage() {
         </div>
       </header>
 
-      <main className="mx-auto grid max-w-7xl gap-8 px-6 pb-16 pt-8 lg:grid-cols-[minmax(0,1.14fr)_minmax(380px,0.86fr)] lg:px-8 lg:pb-24 lg:pt-14">
+      <main className="mx-auto grid max-w-6xl gap-10 px-6 pb-16 pt-12 lg:grid-cols-[minmax(0,1fr)_minmax(360px,0.9fr)] lg:items-start lg:px-8 lg:pb-24 lg:pt-16">
         <motion.section
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
@@ -155,52 +135,23 @@ export default function LandingPage() {
             <span className="h-1.5 w-1.5 rounded-full bg-primary shadow-[0_0_18px_hsl(var(--primary))]" />
             Live on Ethereum Sepolia
           </span>
-          <h1 className="mt-7 max-w-4xl text-balance text-5xl font-semibold leading-[0.98] tracking-tight md:text-7xl">
-            Real estate ownership, rent, and trust
+          <h1 className="mt-6 max-w-xl text-balance text-5xl font-semibold leading-[0.98] tracking-tight md:text-6xl">
+            Tokenized real estate,
             <span className="block bg-gradient-to-r from-primary via-chart-3 to-chart-2 bg-clip-text text-transparent">
-              redesigned for Web3.
+              on-chain rent.
             </span>
           </h1>
-          <p className="mt-6 max-w-2xl text-balance text-base leading-8 text-muted-foreground md:text-lg">
-            EstateChain connects MetaMask identity, smart contracts, backend verification, and role-based dashboards
-            into a single premium workflow for owners, investors, and tenants.
+          <p className="mt-5 max-w-xl text-balance text-base leading-7 text-muted-foreground">
+            EstateChain turns properties into fractional ERC-20 tokens, and pays rent directly to investors through a single rent contract. No intermediaries, no spreadsheets — just on-chain ownership.
           </p>
 
-          <div className="mt-8 grid max-w-2xl gap-3 sm:grid-cols-3">
-            {HERO_STATS.map((stat) => (
-              <div key={stat.label} className="glass-panel rounded-2xl px-4 py-3">
-                <div className="text-lg font-semibold tracking-tight">{stat.value}</div>
-                <div className="mt-1 text-xs text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 grid max-w-3xl gap-3 md:grid-cols-2">
+          <div className="mt-7 grid max-w-xl gap-2.5 sm:grid-cols-2">
             {FEATURE_GRID.map((feature) => (
-              <div key={feature.label} className="group rounded-2xl border border-border/70 bg-card/70 p-4 shadow-sm backdrop-blur transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-xl hover:shadow-primary/5">
-                <div className="flex items-center gap-3">
-                  <div className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
-                    <feature.icon className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <div className="text-sm font-semibold">{feature.label}</div>
-                    <div className="mt-1 text-xs leading-5 text-muted-foreground">{feature.detail}</div>
-                  </div>
+              <div key={feature.label} className="rounded-xl border border-border/70 bg-card/60 px-3 py-2.5 shadow-sm backdrop-blur">
+                <div className="flex items-center gap-2.5">
+                  <feature.icon className="h-4 w-4 text-primary" />
+                  <span className="text-sm font-medium">{feature.label}</span>
                 </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="mt-8 flex max-w-2xl flex-col gap-3 rounded-3xl border border-border/70 bg-card/50 p-4 backdrop-blur md:flex-row md:items-center md:justify-between">
-            {PROCESS_STEPS.map((step, index) => (
-              <div key={step.label} className="flex items-center gap-3">
-                <div className="grid h-9 w-9 place-items-center rounded-full bg-foreground text-background">
-                  <step.icon className="h-4 w-4" />
-                </div>
-                <div className="text-sm font-medium">{step.label}</div>
-                {index < PROCESS_STEPS.length - 1 && (
-                  <ArrowRight className="hidden h-4 w-4 text-muted-foreground md:block" />
-                )}
               </div>
             ))}
           </div>
@@ -210,21 +161,14 @@ export default function LandingPage() {
           initial={{ opacity: 0, y: 12 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.4, delay: 0.05 }}
-          className="glass-strong relative overflow-hidden rounded-[2rem] p-6 md:p-7"
+          className="relative overflow-hidden rounded-2xl border border-border/70 bg-card/80 p-6 shadow-2xl shadow-primary/5 backdrop-blur"
         >
-          <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
-          <div className="pointer-events-none absolute -bottom-24 -left-24 h-64 w-64 rounded-full bg-chart-2/20 blur-3xl" />
-
           {view === "connect" && (
-            <div className="relative flex flex-col gap-5">
+            <div className="relative flex flex-col gap-4">
               <div>
-                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1 text-[11px] font-medium uppercase tracking-[0.18em] text-primary">
-                  <ShieldCheck className="h-3.5 w-3.5" />
-                  Secure wallet login
-                </span>
-                <h2 className="mt-4 text-2xl font-semibold tracking-tight">Start with MetaMask</h2>
+                <h2 className="text-2xl font-semibold tracking-tight">Sign in with your wallet</h2>
                 <p className="mt-2 text-sm leading-6 text-muted-foreground">
-                  Sign a one-time challenge to unlock your dashboard. Your private key never leaves your wallet.
+                  We use a MetaMask signature as your identity. No passwords, no gas.
                 </p>
               </div>
               <Button onClick={handleConnect} disabled={busy} size="lg" className="h-12 gap-2 rounded-2xl">
@@ -236,13 +180,10 @@ export default function LandingPage() {
                   {error}
                 </p>
               )}
-              <ul className="grid gap-3 text-sm text-muted-foreground">
-                {TRUST_POINTS.map((point) => (
-                  <li key={point} className="flex gap-3 rounded-2xl border border-border/60 bg-background/40 p-3">
-                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0 text-success" />
-                    <span>{point}</span>
-                  </li>
-                ))}
+              <ul className="space-y-1.5 text-xs leading-5 text-muted-foreground">
+                <li>* You'll sign a one-time message. Nothing is broadcast on-chain.</li>
+                <li>* Your wallet is your identity. Roles are bound at sign-up.</li>
+                <li>* Network: Sepolia (chainId 11155111).</li>
               </ul>
             </div>
           )}

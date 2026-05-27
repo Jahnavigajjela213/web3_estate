@@ -121,6 +121,19 @@
     --surface-glass: 222 26% 12%;
     --elevate: 220 20% 97% / 0.04;
   }
+
+  /* Investor suite - Figma light text (primary #010101, secondary #6c7381) */
+  html:not(.dark).investor-route {
+    --background: 228 33% 97%;
+    --foreground: 0 0% 0.4%;
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 0.4%;
+    --popover-foreground: 0 0% 0.4%;
+    --secondary-foreground: 0 0% 0.4%;
+    --muted-foreground: 221 9% 46%;
+    --border: 220 20% 92%;
+    --chart-7: 221 9% 46%;
+  }
 }
 
 @layer base {

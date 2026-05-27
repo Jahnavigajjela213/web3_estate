@@ -7,6 +7,7 @@ const nextConfig = {
   },
   async redirects() {
     return [
+      { source: "/investor/yield", destination: "/investor", permanent: false },
       { source: "/admin", destination: "/property_owner", permanent: true },
       { source: "/admin/:path*", destination: "/property_owner/:path*", permanent: true },
     ];

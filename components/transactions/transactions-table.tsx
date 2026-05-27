@@ -5,6 +5,7 @@ import {
   ArrowDownToLine,
   ArrowUpRight,
   Building2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Coins,
@@ -40,6 +41,29 @@ import type { Transaction } from "@/lib/types";
 
 const PAGE_SIZE = 12;
 
+type InvestorTypeFilter = "all" | "investment" | "yield_claimed";
+
+const INVESTMENT_TYPES = new Set([
+  "investment",
+  "INVESTMENT_COMPLETED",
+  "INVESTMENT_FUNDED",
+  "ISSUE_TOKENS",
+]);
+
+const YIELD_CLAIMED_TYPES = new Set(["REWARDS_CLAIMED"]);
+
+const INVESTOR_TYPE_FILTER_OPTIONS: { value: InvestorTypeFilter; label: string }[] = [
+  { value: "all", label: "All types" },
+  { value: "investment", label: "Investment" },
+  { value: "yield_claimed", label: "Yield Claimed" },
+];
+
+function matchesInvestorTypeFilter(type: string, filter: InvestorTypeFilter) {
+  if (filter === "all") return true;
+  if (filter === "investment") return INVESTMENT_TYPES.has(type);
+  return YIELD_CLAIMED_TYPES.has(type);
+}
+
 const TYPE_META: Record<string, { color: string; icon: React.ComponentType<{ className?: string }>; label: string }> = {
   investment: { color: "bg-chart-1/15 text-chart-1", icon: Coins, label: "Investment" },
   INVESTMENT_COMPLETED: { color: "bg-chart-1/15 text-chart-1", icon: Coins, label: "Investment" },
@@ -58,81 +82,56 @@ const TYPE_META: Record<string, { color: string; icon: React.ComponentType<{ cla
   default: { color: "bg-muted text-muted-foreground", icon: Receipt, label: "Transaction" },
 };
 
-function statusBadge(status?: string, className?: string) {
+function statusBadge(status?: string) {
   const s = (status || "").toLowerCase();
   if (s === "completed" || s === "confirmed" || s === "success")
-    return <Badge variant="success" className={className}>Completed</Badge>;
-  if (s === "pending" || s === "queued") return <Badge variant="warning" className={className}>Pending</Badge>;
-  if (s === "failed" || s === "reverted") return <Badge variant="destructive" className={className}>Failed</Badge>;
-  return <Badge variant="muted" className={className}>{status || "—"}</Badge>;
-}
-
-function formatEthCompact(value?: string | number | null) {
-  if (value === null || value === undefined || value === "") return "—";
-  const raw = Number(value);
-  if (!Number.isFinite(raw)) return "—";
-  const eth = Math.abs(raw) > 1_000_000 ? raw / 1e18 : raw;
-  return `${eth.toFixed(5).replace(/\.?0+$/, "") || "0"} ETH`;
+    return <Badge variant="success">Completed</Badge>;
+  if (s === "pending" || s === "queued") return <Badge variant="warning">Pending</Badge>;
+  if (s === "failed" || s === "reverted") return <Badge variant="destructive">Failed</Badge>;
+  return <Badge variant="muted">{status || "—"}</Badge>;
 }
 
 export function TransactionsTable({
   transactions,
   loading,
+  showTypeFilter = false,
 }: {
   transactions: Transaction[];
   loading?: boolean;
+  /** Investor transactions: filter by Investment / Yield Claimed */
+  showTypeFilter?: boolean;
 }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState("all");
-  const [propertyFilter, setPropertyFilter] = useState("all");
+  const [typeFilter, setTypeFilter] = useState<InvestorTypeFilter>("all");
   const [active, setActive] = useState<Transaction | null>(null);
 
-  const typeOptions = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const transaction of transactions) {
-      if (!transaction.type) continue;
-      map.set(transaction.type, (TYPE_META[transaction.type] || TYPE_META.default).label);
-    }
-    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
-  }, [transactions]);
-
-  const propertyOptions = useMemo(() => {
-    const set = new Set<string>();
-    for (const transaction of transactions) {
-      const property = transaction.property_name || (transaction.property_id ? `#${transaction.property_id}` : "");
-      if (property) set.add(property);
-    }
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [transactions]);
-
   const filtered = useMemo(() => {
+    let rows = transactions;
+    if (showTypeFilter && typeFilter !== "all") {
+      rows = rows.filter((t) => matchesInvestorTypeFilter(t.type, typeFilter));
+    }
+    if (!search.trim()) return rows;
     const q = search.toLowerCase();
-    return transactions.filter(
-      (t) => {
-        const property = t.property_name || (t.property_id ? `#${t.property_id}` : "");
-        const matchesSearch =
-          !q.trim() ||
-          t.tx_hash?.toLowerCase().includes(q) ||
-          t.wallet_address?.toLowerCase().includes(q) ||
-          t.property_name?.toLowerCase().includes(q) ||
-          t.action_label?.toLowerCase().includes(q);
-        const matchesType = typeFilter === "all" || t.type === typeFilter;
-        const matchesProperty = propertyFilter === "all" || property === propertyFilter;
-        return matchesSearch && matchesType && matchesProperty;
-      },
+    return rows.filter(
+      (t) =>
+        t.tx_hash?.toLowerCase().includes(q) ||
+        t.wallet_address?.toLowerCase().includes(q) ||
+        t.property_name?.toLowerCase().includes(q) ||
+        t.action_label?.toLowerCase().includes(q) ||
+        (TYPE_META[t.type]?.label ?? "").toLowerCase().includes(q),
     );
-  }, [transactions, search, typeFilter, propertyFilter]);
+  }, [transactions, search, showTypeFilter, typeFilter]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
   const visible = filtered.slice((safePage - 1) * PAGE_SIZE, safePage * PAGE_SIZE);
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-border/60 bg-card/[0.78] shadow-sm backdrop-blur-2xl">
-      <div className="flex flex-col gap-3 border-b border-border/60 p-4">
-        <div className="flex flex-col gap-2 xl:flex-row xl:items-center">
-          <div className="relative w-full xl:max-w-sm">
+    <div className="rounded-xl border border-border bg-card">
+      <div className="flex flex-col gap-3 border-b border-border p-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-1 flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:max-w-md">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground" />
             <Input
               value={search}
@@ -141,59 +140,39 @@ export function TransactionsTable({
                 setPage(1);
               }}
               placeholder="Search by hash, wallet, property…"
-              className="h-9 rounded-xl pl-8 text-sm"
+              className="h-9 pl-8 text-sm"
             />
           </div>
-          <select
-            value={typeFilter}
-            onChange={(event) => {
-              setTypeFilter(event.target.value);
-              setPage(1);
-            }}
-            className="h-9 min-w-[180px] rounded-xl border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring"
-          >
-            <option value="all">All transaction types</option>
-            {typeOptions.map(([type, label]) => (
-              <option key={type} value={type}>
-                {label}
-              </option>
-            ))}
-          </select>
-          <select
-            value={propertyFilter}
-            onChange={(event) => {
-              setPropertyFilter(event.target.value);
-              setPage(1);
-            }}
-            className="h-9 min-w-[220px] rounded-xl border border-input bg-background px-3 text-sm outline-none transition-colors focus:border-ring"
-          >
-            <option value="all">All properties</option>
-            {propertyOptions.map((property) => (
-              <option key={property} value={property}>
-                {property}
-              </option>
-            ))}
-          </select>
-          {(typeFilter !== "all" || propertyFilter !== "all" || search.trim()) ? (
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-9 rounded-xl px-3"
-              onClick={() => {
-                setSearch("");
-                setTypeFilter("all");
-                setPropertyFilter("all");
-                setPage(1);
-              }}
-            >
-              Reset filters
-            </Button>
+          {showTypeFilter ? (
+            <div className="relative w-full sm:w-[180px] sm:shrink-0">
+              <select
+                value={typeFilter}
+                onChange={(e) => {
+                  setTypeFilter(e.target.value as InvestorTypeFilter);
+                  setPage(1);
+                }}
+                aria-label="Filter by transaction type"
+                className={cn(
+                  "h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-background pl-3 pr-9 text-sm shadow-sm",
+                  "text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                )}
+              >
+                {INVESTOR_TYPE_FILTER_OPTIONS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown
+                className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                aria-hidden
+              />
+            </div>
           ) : null}
-          <span className="text-sm text-muted-foreground xl:ml-auto">
-            {filtered.length} transaction{filtered.length === 1 ? "" : "s"}
-          </span>
         </div>
+        <span className="shrink-0 text-xs text-muted-foreground sm:text-right">
+          {filtered.length} transaction{filtered.length === 1 ? "" : "s"}
+        </span>
       </div>
 
       <Table>
@@ -238,7 +217,7 @@ export function TransactionsTable({
                       <span className={cn("grid h-7 w-7 place-items-center rounded-md", meta.color)}>
                         <Icon className="h-3.5 w-3.5" />
                       </span>
-                      <span className="text-sm font-medium">{meta.label}</span>
+                      <span className="text-xs font-medium">{meta.label}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -246,15 +225,15 @@ export function TransactionsTable({
                       {t.property_name || (t.property_id ? `#${t.property_id}` : "—")}
                     </span>
                   </TableCell>
-                  <TableCell className="font-mono text-sm">
+                  <TableCell className="font-mono text-xs">
                     {t.wallet_address ? shortAddress(t.wallet_address, 6, 4) : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     <span className="text-sm font-medium">{t.display_amount}</span>
-                    <span className="ml-1 text-sm text-muted-foreground">{t.amount_unit}</span>
+                    <span className="ml-1 text-xs text-muted-foreground">{t.amount_unit}</span>
                   </TableCell>
-                  <TableCell>{statusBadge(t.status, "text-sm")}</TableCell>
-                  <TableCell className="text-sm text-muted-foreground">{formatDateTime(t.timestamp)}</TableCell>
+                  <TableCell>{statusBadge(t.status)}</TableCell>
+                  <TableCell className="text-xs text-muted-foreground">{formatDateTime(t.timestamp)}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" className="h-7 w-7">
                       <ArrowUpRight className="h-3.5 w-3.5" />
@@ -267,7 +246,7 @@ export function TransactionsTable({
         </TableBody>
       </Table>
 
-      <div className="flex items-center justify-between gap-2 border-t border-border/60 px-4 py-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-muted-foreground">
         <span>
           Page {safePage} / {totalPages}
         </span>
@@ -303,58 +282,99 @@ function TransactionDialog({ tx, onClose }: { tx: Transaction | null; onClose: (
   if (!tx) return null;
   const meta = TYPE_META[tx.type] || TYPE_META.default;
   const Icon = meta.icon;
-  const walletDisplay = tx.wallet_address ? shortAddress(tx.wallet_address, 6, 4).replace("…", "...") : "—";
+  const walletLabel = tx.wallet_address ? shortAddress(tx.wallet_address, 6, 4) : "—";
+
   return (
     <Dialog open onOpenChange={(o) => (!o ? onClose() : null)}>
-      <DialogContent className="max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center gap-3">
-            <span className={cn("grid h-9 w-9 place-items-center rounded-md", meta.color)}>
-              <Icon className="h-4 w-4" />
+      <DialogContent className="max-w-lg gap-5 overflow-hidden p-6 sm:rounded-2xl">
+        <DialogHeader className="space-y-0 text-left">
+          <div className="flex items-start gap-3 pr-6">
+            <span
+              className={cn(
+                "grid h-10 w-10 shrink-0 place-items-center rounded-lg ring-1 ring-inset",
+                meta.color,
+              )}
+            >
+              <Icon className="h-[18px] w-[18px]" strokeWidth={2} />
             </span>
-            <div className="min-w-0">
+            <div className="min-w-0 flex-1">
               <div className="flex flex-wrap items-center gap-2">
-                <DialogTitle>{meta.label}</DialogTitle>
-                {statusBadge(tx.status, "px-2 py-0 text-sm")}
+                <DialogTitle className="text-lg font-semibold leading-tight">{meta.label}</DialogTitle>
+                {statusBadge(tx.status)}
               </div>
-              <DialogDescription>{tx.description}</DialogDescription>
+              {tx.description ? (
+                <DialogDescription className="mt-1.5 text-sm leading-snug text-muted-foreground">
+                  {tx.description}
+                </DialogDescription>
+              ) : null}
             </div>
           </div>
         </DialogHeader>
-        <div className="grid grid-cols-2 gap-3 text-sm">
-          <Row label="Amount" value={`${tx.display_amount} ${tx.amount_unit}`} />
-          <Row label="Property" value={tx.property_name || (tx.property_id ? `#${tx.property_id}` : "—")} />
-          <Row label="Wallet" value={<span className="font-mono text-sm">{walletDisplay}</span>} />
-          <Row label="Block" value={tx.block_number ?? "—"} />
-          <Row label="Date" value={formatDateTime(tx.timestamp)} />
-          {tx.gas_fee ? <Row label="Gas Fee" value={formatEthCompact(tx.gas_fee)} /> : null}
-          {tx.amount_spent ? <Row label="Amount Spent" value={formatEthCompact(tx.amount_spent)} /> : null}
-          {tx.remaining_balance ? <Row label="Remaining Balance" value={formatEthCompact(tx.remaining_balance)} /> : null}
+
+        <div className="grid grid-cols-2 gap-x-4 gap-y-4">
+          <DetailField label="Amount" value={`${tx.display_amount} ${tx.amount_unit}`} />
+          <DetailField
+            label="Property"
+            value={tx.property_name || (tx.property_id ? `#${tx.property_id}` : "—")}
+          />
+          <DetailField
+            label="Wallet"
+            value={walletLabel}
+            mono
+            title={tx.wallet_address || undefined}
+          />
+          <DetailField label="Block" value={tx.block_number ?? "—"} />
+          <DetailField label="Date" value={formatDateTime(tx.timestamp)} />
+          {tx.gas_fee ? <DetailField label="Gas Fee" value={`${tx.gas_fee} ETH`} /> : null}
+          {tx.amount_spent ? <DetailField label="Amount Spent" value={`${tx.amount_spent} ETH`} /> : null}
+          {tx.remaining_balance ? (
+            <DetailField label="Remaining Balance" value={`${tx.remaining_balance} ETH`} />
+          ) : null}
         </div>
-        <div className="rounded-md border border-border bg-muted/40 px-3 py-2">
-          <div className="text-sm font-medium uppercase tracking-wider text-muted-foreground">Transaction Hash</div>
-          <div className="mt-1 break-all font-mono text-sm">{tx.tx_hash}</div>
+
+        <div className="rounded-lg bg-muted/50 px-3.5 py-3 ring-1 ring-border/60">
+          <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            Transaction Hash
+          </div>
+          <div className="mt-1.5 break-all font-mono text-xs leading-relaxed text-foreground">{tx.tx_hash}</div>
         </div>
+
         <a
           href={txExplorerUrl(tx.tx_hash)}
           target="_blank"
           rel="noreferrer"
           className="inline-flex w-fit items-center gap-1.5 text-sm font-medium text-primary hover:underline"
         >
-          View on Etherscan <ExternalLink className="h-3 w-3" />
+          View on Etherscan <ExternalLink className="h-3.5 w-3.5" />
         </a>
       </DialogContent>
     </Dialog>
   );
 }
 
-function Row({ label, value }: { label: string; value: React.ReactNode }) {
+function DetailField({
+  label,
+  value,
+  mono,
+  title,
+}: {
+  label: string;
+  value: React.ReactNode;
+  mono?: boolean;
+  title?: string;
+}) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <span className="text-sm font-medium uppercase tracking-wider text-muted-foreground">
-        {label}
-      </span>
-      <span className="text-sm">{value}</span>
+    <div className="min-w-0">
+      <div className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">{label}</div>
+      <div
+        className={cn(
+          "mt-1 truncate text-sm font-medium text-foreground",
+          mono && "font-mono text-xs",
+        )}
+        title={title}
+      >
+        {value}
+      </div>
     </div>
   );
 }

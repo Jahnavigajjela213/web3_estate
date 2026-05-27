@@ -17,17 +17,29 @@ export function formatTokenPriceEth(priceEth: number, digits = 6): string {
 }
 
 export const propertyDialogContentClass =
-  "flex h-[min(700px,calc(100vh-2rem))] w-[min(100vw-2rem,30rem)] max-w-[min(100vw-2rem,30rem)] flex-col gap-0 overflow-hidden border-border/70 bg-card p-0 shadow-2xl dark:border-slate-700/80 dark:bg-slate-950 sm:rounded-2xl";
+  "flex max-h-[calc(100vh-3rem)] w-[min(100vw-2rem,28rem)] max-w-[min(100vw-2rem,28rem)] flex-col gap-3 overflow-hidden p-0 sm:max-w-md";
 
 /** Inner padded scroll container used inside each property dialog. */
 export const propertyDialogBodyClass =
-  "scrollbar-thin flex min-h-0 flex-col gap-3 overflow-y-auto px-4 pb-4 pt-4";
+  "scrollbar-thin flex min-h-0 flex-col gap-4 overflow-y-auto px-6 pb-6 pt-5";
+
+/** Scrollable main area for property detail overview modals (admin / tenant). */
+export const propertyDetailScrollBodyClass =
+  "scrollbar-thin min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain scroll-smooth";
+
+/** Investor detail modal shell — 512px (max-w-lg), height follows content up to min(92vh, 920px). */
+export const investorPropertyDetailDialogClass =
+  "flex h-fit w-full max-w-lg flex-col gap-0 overflow-hidden p-0 max-h-[min(92vh,920px)] sm:rounded-2xl";
+
+/** Investor detail scroll body (reserves ~48px for the pinned Invest footer). */
+export const investorPropertyDetailScrollBodyClass =
+  "scrollbar-thin overflow-x-hidden overflow-y-auto overscroll-contain scroll-smooth max-h-[calc(min(92vh,920px)-3rem)]";
 
 /** Sticky footer styling used at the bottom of property dialogs. */
 export const propertyDialogFooterClass =
-  "sticky bottom-0 z-10 flex flex-col-reverse gap-3 border-t border-border/60 bg-card px-4 py-3 dark:bg-slate-950 sm:flex-row sm:justify-end";
+  "sticky bottom-0 z-10 flex flex-col-reverse gap-2 border-t border-border/60 bg-card/95 px-6 py-3 backdrop-blur sm:flex-row sm:justify-end";
 
-export const propertyFormClass = "grid min-w-0 gap-2.5";
+export const propertyFormClass = "grid min-w-0 gap-3";
 
 export const propertyFormGridClass = "grid min-w-0 grid-cols-1 gap-3 sm:grid-cols-2";
 
@@ -42,8 +54,8 @@ export function PropertyFormField({
 }) {
   return (
     <div className={cn("grid min-w-0 gap-1.5", className)}>
-      <Label className="text-sm font-semibold normal-case tracking-normal text-foreground">{label}</Label>
-      <div className="min-w-0 [&_input]:h-11 [&_input]:min-w-0 [&_input]:w-full [&_input]:max-w-full [&_input]:rounded-xl [&_input]:border-border/80 [&_input]:bg-background/70 [&_input]:px-3.5 [&_input]:text-sm [&_input]:shadow-sm dark:[&_input]:border-slate-700 dark:[&_input]:bg-slate-950/70">{children}</div>
+      <Label className="text-xs">{label}</Label>
+      <div className="min-w-0 [&_input]:min-w-0 [&_input]:w-full [&_input]:max-w-full">{children}</div>
     </div>
   );
 }

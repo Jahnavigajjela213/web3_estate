@@ -40,10 +40,14 @@ export default function DashboardPage() {
 
   const [selected, setSelected] = useState<Property | null>(null);
   useEffect(() => {
-    if (selected) return;
-    if (properties.data && properties.data.length > 0) {
-      setSelected(properties.data[0]);
-    }
+    const list = properties.data ?? [];
+    if (list.length === 0) return;
+    if (selected && list.some((property) => property.id === selected.id)) return;
+
+    const firstInvestedProperty = list.find(
+      (property) => !!property.token_address && Number(property.tokens_sold ?? 0) > 0,
+    );
+    setSelected(firstInvestedProperty ?? list[0]);
   }, [properties.data, selected]);
 
   const allProperties = properties.data ?? [];

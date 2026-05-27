@@ -40,3 +40,10 @@ export function txExplorerUrl(hash?: string | null): string {
   if (!hash) return "#";
   return `${RUNTIME_CONFIG.explorerTxBase}${hash}`;
 }
+
+export function addressExplorerUrl(address?: string | null): string {
+  if (!address) return "#";
+  const txBase = RUNTIME_CONFIG.explorerTxBase;
+  const addressBase = txBase.endsWith("/tx/") ? txBase.slice(0, -4) + "/address/" : txBase;
+  return `${addressBase}${address}`;
+}
