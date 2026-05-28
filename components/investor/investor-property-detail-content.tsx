@@ -46,7 +46,6 @@ function deriveFinancialOverview(property: Property) {
     expectedRoi: `${expectedRoi.toFixed(1)}%`,
     netYield: `${netYield.toFixed(1)}%`,
     payback: `${paybackYears.toFixed(1)} Years`,
-    occupancy: property.rent_enabled ? "90%+" : "—",
   };
 }
 
@@ -144,7 +143,6 @@ function PropertyInfoGrid({
       </Panel>
 
       <Panel title="Property details">
-        <Row label="Property type" value="Residential" />
         <Row label="Location" value={property.location || "—"} />
         <Row label="Token symbol" value={property.token_symbol} emphasize />
         <Row label="Total supply" value={formatNumber(property.token_supply)} />
@@ -161,7 +159,6 @@ function PropertyInfoGrid({
             <Row label="Expected ROI (annual)" value={financials.expectedRoi} emphasize />
             <Row label="Net yield (annual)" value={financials.netYield} emphasize />
             <Row label="Payback period" value={financials.payback} emphasize />
-            <Row label="Target occupancy" value={financials.occupancy} emphasize />
           </>
         ) : (
           <p className="text-xs leading-snug text-muted-foreground">

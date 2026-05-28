@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { BadgeCheck, Check, Copy, MapPin, Pencil, Receipt } from "lucide-react";
 import { toast } from "sonner";
 import {
@@ -26,7 +26,7 @@ import {
 } from "@/components/properties/property-form-shared";
 import { PropertyImageGallery } from "@/components/properties/property-image-gallery";
 import { availablePropertyTokens, propertyIsInvestable, propertyUnitValue } from "@/components/investor/investor-utils";
-import { useProperty } from "@/lib/queries";
+import { useProperty, useTransactions } from "@/lib/queries";
 import { addressExplorerUrl, RUNTIME_CONFIG } from "@/lib/runtime-config";
 import type { Property, Role } from "@/lib/types";
 import { cn, formatCurrency, formatDateTime, formatNumber, percent, shortAddress } from "@/lib/utils";
@@ -64,7 +64,6 @@ function deriveFinancialOverview(property: Property) {
     expectedRoi: `${expectedRoi.toFixed(1)}%`,
     netYield: `${(expectedRoi * 0.66).toFixed(1)}%`,
     payback: `${(navEth / annualRentEth).toFixed(1)} Years`,
-    occupancy: property.rent_enabled ? "90%+" : "—",
   };
 }
 
@@ -96,11 +95,10 @@ export function PropertyDetailDialog({
   onAction?: () => void;
 }) {
   const propertyQuery = useProperty(open ? initialProperty?.id : null);
+  const transactionsQuery = useTransactions();
   const property = propertyQuery.data ?? initialProperty;
   const loading = propertyQuery.isLoading && !property;
   const isInvestor = role === "investor";
-
-  if (!initialProperty && !open) return null;
 
   const sold = Number(property?.tokens_sold ?? 0);
   const supply = Number(property?.token_supply ?? 0);
@@ -112,6 +110,24 @@ export function PropertyDetailDialog({
   const unitValue = propertyUnitValue(property);
   const rentReady = Boolean(property?.rent_enabled && monthlyRent > 0);
   const financials = property ? deriveFinancialOverview(property) : null;
+  const creatorWallet = useMemo(() => {
+    if (!property) return null;
+    if (property.owner_wallet) return property.owner_wallet;
+
+    const creatorTx = (transactionsQuery.data ?? []).find((tx) => {
+      if (!tx.wallet_address || String(tx.property_id ?? "") !== String(property.id)) return false;
+      const type = tx.type?.toLowerCase() ?? "";
+      return (
+        type.includes("property_listing") ||
+        type.includes("property_token_deployment") ||
+        type.includes("mint_nft") ||
+        type.includes("token_deployed")
+      );
+    });
+    return creatorTx?.wallet_address ?? null;
+  }, [property, transactionsQuery.data]);
+
+  if (!initialProperty && !open) return null;
 
   const effectivePrimaryAction = onPrimaryAction ?? onAction;
   const effectivePrimaryDisabled = primaryDisabled ?? actionDisabled;
@@ -256,7 +272,6 @@ export function PropertyDetailDialog({
                   </InfoCard>
 
                   <InfoCard title="Property details">
-                    <InfoRow label="Property type" value="Residential" />
                     <InfoRow label="Location" value={property.location || "—"} />
                     <InfoRow label="Token symbol" value={property.token_symbol} />
                     <InfoRow label="Total supply" value={formatNumber(supply)} />
@@ -273,7 +288,6 @@ export function PropertyDetailDialog({
                         <InfoRow label="Expected ROI (annual)" value={financials.expectedRoi} />
                         <InfoRow label="Net yield (annual)" value={financials.netYield} />
                         <InfoRow label="Payback period" value={financials.payback} />
-                        <InfoRow label="Target occupancy" value={financials.occupancy} />
                       </>
                     ) : (
                       <p className="text-xs leading-relaxed text-muted-foreground">
@@ -292,7 +306,13 @@ export function PropertyDetailDialog({
                       }
                     />
                     <InfoRow label="Token standard" value={property.nft_token_id != null ? "ERC-721" : property.token_address ? "ERC-20" : "—"} />
-                    <CopyRow label="Created by" value={property.owner_wallet} fallback="—" mono />
+                    <CopyRow
+                      label="Created by"
+                      value={creatorWallet}
+                      fallback="Creator not recorded"
+                      mono
+                      explorer={creatorWallet ? addressExplorerUrl(creatorWallet) : undefined}
+                    />
                     <InfoRow
                       label="Verified"
                       value={

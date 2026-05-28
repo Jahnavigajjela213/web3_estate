@@ -6,40 +6,6 @@ import { Mic, MicOff, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAgentStore } from "@/lib/ai/agent-store";
 
-const STATE_LABELS: Record<string, string> = {
-  idle: "Tap to start",
-  listening: "Listening…",
-  recording: "Listening…",
-  transcribing: "Got it…",
-  thinking: "Thinking…",
-  speaking: "Speaking…",
-  error: "Connection issue",
-};
-
-const STATE_HINTS: Record<string, string> = {
-  listening: "Just speak — I'll respond.",
-  recording: "I'm hearing you…",
-  transcribing: "Processing what you said…",
-  thinking: "Working on a reply…",
-  speaking: "Tap to interrupt or just talk over me.",
-  error: "Tap the mic to retry.",
-};
-
-function VoiceReplyDots() {
-  return (
-    <span className="flex items-center gap-2" aria-label="Agent replying">
-      {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          className="h-2.5 w-2.5 rounded-full bg-primary"
-          animate={{ y: [0, -4, 0], opacity: [0.35, 1, 0.35] }}
-          transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
-        />
-      ))}
-    </span>
-  );
-}
-
 export function VoiceModeOverlay() {
   const store = useAgentStore();
   const { voiceMode, state, micLevel, error, messages, aiSpeaking } = store;
@@ -68,7 +34,6 @@ export function VoiceModeOverlay() {
   const isSpeaking = state === "speaking" || aiSpeaking;
   const isThinking = state === "thinking" || state === "transcribing";
   const isListening = state === "listening" || state === "recording";
-  const agentReplying = isSpeaking || isThinking;
 
   // Orb scale follows mic level when listening; gentle breathing pulse when AI speaks.
   const orbScale = isListening ? 1 + smoothLevel * 0.55 : 1;
@@ -113,20 +78,16 @@ export function VoiceModeOverlay() {
             scale={orbScale}
           />
 
-          <div className="flex max-w-md flex-col items-center gap-2 text-center">
-            <motion.span
-              key={agentReplying ? "agent-replying" : state}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="text-base font-medium text-foreground/85"
-            >
-              {agentReplying ? <VoiceReplyDots /> : STATE_LABELS[state] || "…"}
-            </motion.span>
-            {!agentReplying ? (
-              <span className="text-xs leading-relaxed text-muted-foreground">
-                {error ? error : STATE_HINTS[state] || ""}
-              </span>
-            ) : null}
+          <div className="flex min-h-[46px] max-w-md flex-col items-center justify-center gap-2 text-center">
+            {isThinking || isSpeaking ? (
+              <VoiceDots />
+            ) : error ? (
+              <span className="text-sm leading-relaxed text-destructive">{error}</span>
+            ) : isListening ? (
+              <span className="text-sm leading-relaxed text-muted-foreground">Listening</span>
+            ) : (
+              <span className="text-sm leading-relaxed text-muted-foreground">Tap to start</span>
+            )}
           </div>
 
           {/* Live captions */}
@@ -140,15 +101,7 @@ export function VoiceModeOverlay() {
                 {recent.lastUser}
               </motion.div>
             )}
-            {agentReplying ? (
-              <motion.div
-                initial={{ opacity: 0, y: 6 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="self-start rounded-2xl rounded-bl-md border border-border/60 bg-card/80 px-4 py-2 shadow-lg backdrop-blur"
-              >
-                <VoiceReplyDots />
-              </motion.div>
-            ) : recent.lastAssistant ? (
+            {recent.lastAssistant && !isThinking && !isSpeaking && (
               <motion.div
                 initial={{ opacity: 0, y: 6 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -156,7 +109,7 @@ export function VoiceModeOverlay() {
               >
                 {recent.lastAssistant}
               </motion.div>
-            ) : null}
+            )}
           </div>
         </div>
 
@@ -175,6 +128,21 @@ export function VoiceModeOverlay() {
         </div>
       </motion.div>
     </AnimatePresence>
+  );
+}
+
+function VoiceDots() {
+  return (
+    <div className="flex items-center gap-1" aria-label="Agent replying">
+      {[0, 1, 2].map((i) => (
+        <motion.span
+          key={i}
+          className="h-2 w-2 rounded-full bg-primary"
+          animate={{ y: [0, -4, 0], opacity: [0.35, 1, 0.35] }}
+          transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
+        />
+      ))}
+    </div>
   );
 }
 

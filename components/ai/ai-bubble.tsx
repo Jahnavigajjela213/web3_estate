@@ -224,7 +224,7 @@ export function AIBubble() {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const store = useAgentStore();
-  const { open, messages, state, error, voiceMode, micLevel, aiSpeaking } = store;
+  const { open, messages, state, error, voiceMode, micLevel } = store;
 
   const role = useMemo(() => getRoleFromPath(pathname), [pathname]);
   const quickActions = useMemo(() => getQuickActions(role), [role]);
@@ -287,23 +287,11 @@ export function AIBubble() {
   }
 
   const lastMessages = messages.slice(-40);
-  const latestAssistantIndex = (() => {
-    for (let i = lastMessages.length - 1; i >= 0; i -= 1) {
-      if (lastMessages[i]?.role === "assistant") return i;
-    }
-    return -1;
-  })();
-  const latestUserIndex = (() => {
-    for (let i = lastMessages.length - 1; i >= 0; i -= 1) {
-      if (lastMessages[i]?.role === "user") return i;
-    }
-    return -1;
-  })();
-  const activeAssistantReplyIndex = latestAssistantIndex > latestUserIndex ? latestAssistantIndex : -1;
   const pill = getStatePill(state);
   const busy = state === "thinking";
-  const showAgentDots = state === "thinking" || state === "transcribing" || state === "speaking" || aiSpeaking;
+  const showAgentDots = state === "thinking" || state === "transcribing" || state === "speaking";
   const isListening = state === "listening" || state === "recording";
+  const isSpeaking = state === "speaking";
   const hasUserConversation = messages.some((m) => m.role === "user");
   const showWelcome = !hasUserConversation;
 
@@ -356,12 +344,21 @@ export function AIBubble() {
                     )}
                     title={pill.label}
                   >
-                    <motion.span
-                      className={cn("h-1.5 w-1.5 rounded-full", pill.dot)}
-                      animate={{ opacity: [0.55, 1, 0.55] }}
-                      transition={{ duration: 1.8, repeat: Infinity }}
-                    />
-                    {pill.label}
+                    {showAgentDots ? (
+                      <>
+                        <span>Thinking</span>
+                        <ThinkingDots />
+                      </>
+                    ) : (
+                      <>
+                        <motion.span
+                          className={cn("h-1.5 w-1.5 rounded-full", pill.dot)}
+                          animate={{ opacity: [0.55, 1, 0.55] }}
+                          transition={{ duration: 1.8, repeat: Infinity }}
+                        />
+                        {pill.label}
+                      </>
+                    )}
                   </span>
                 </div>
                 <p className="mt-0.5 truncate text-[11.5px] leading-tight text-muted-foreground">
@@ -423,9 +420,8 @@ export function AIBubble() {
                   </>
                 ) : (
                   lastMessages.map((msg, i) => {
-                    if (!msg.content && msg.role === "assistant" && !showAgentDots) return null;
+                    if (!msg.content && msg.role === "assistant") return null;
                     const isUser = msg.role === "user";
-                    const showDotsForThisMessage = showAgentDots && i === activeAssistantReplyIndex;
                     return (
                       <div
                         key={i}
@@ -447,7 +443,7 @@ export function AIBubble() {
                               : "rounded-bl-md border border-border/50 bg-background/80 text-foreground",
                           )}
                         >
-                          {showDotsForThisMessage ? <ThinkingDots /> : msg.content}
+                          {msg.content}
                         </div>
                       </div>
                     );
@@ -455,14 +451,17 @@ export function AIBubble() {
                 )}
 
                 <AnimatePresence>
-                  {showAgentDots && !showWelcome && activeAssistantReplyIndex < 0 && (
+                  {showAgentDots && !showWelcome && (
                       <motion.div
                         key="agent-typing"
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}
-                        className="flex items-end"
+                        className="flex items-end gap-2.5"
                       >
+                        <div className="mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full bg-gradient-to-br from-[hsl(var(--primary-soft))] to-[hsl(243_70%_40%)] text-white shadow-sm ring-1 ring-primary/20">
+                          <Sparkles className="h-3 w-3" />
+                        </div>
                         <div className="rounded-2xl rounded-bl-md border border-border/50 bg-background/80 px-3 py-2">
                           <ThinkingDots />
                         </div>
@@ -516,8 +515,29 @@ export function AIBubble() {
                           }}
                         />
                       ))
-                    ) : showAgentDots ? (
-                      <ThinkingDots />
+                    ) : isSpeaking ? (
+                      [...Array(16)].map((_, i) => (
+                        <motion.div
+                          key={i}
+                          className="w-[2px] rounded-full bg-[hsl(var(--chart-3))]"
+                          animate={{ height: [6, 22, 6] }}
+                          transition={{
+                            duration: 0.8,
+                            repeat: Infinity,
+                            delay: i * 0.06,
+                            ease: "easeInOut",
+                          }}
+                        />
+                      ))
+                    ) : busy ? (
+                      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
+                        <motion.span
+                          className="inline-block h-1.5 w-1.5 rounded-full bg-warning"
+                          animate={{ scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }}
+                          transition={{ duration: 1.2, repeat: Infinity }}
+                        />
+                        Thinking…
+                      </div>
                     ) : (
                       <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                         <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -526,11 +546,15 @@ export function AIBubble() {
                     )}
                   </div>
 
-                  {!showAgentDots ? (
-                    <p className="text-[11.5px] text-muted-foreground">
-                      {isListening ? "Listening — speak naturally" : "Tap the mic to end voice mode"}
-                    </p>
-                  ) : null}
+                  <div className="flex min-h-[18px] items-center justify-center text-[11.5px] text-muted-foreground">
+                    {showAgentDots ? (
+                      <ThinkingDots />
+                    ) : isListening ? (
+                      "Listening — speak naturally"
+                    ) : (
+                      "Tap the mic to end voice mode"
+                    )}
+                  </div>
 
                   <button
                     type="button"

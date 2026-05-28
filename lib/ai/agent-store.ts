@@ -238,6 +238,8 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
               if (event.type === "token") {
                 const delta = event.content || "";
                 streamingText += delta;
+                assistantMessage = { ...assistantMessage, content: streamingText };
+                set({ messages: [...history, assistantMessage] });
               } else if (event.type === "complete") {
                 finalReply = (event.reply || "").trim();
                 if (finalReply && streamingText !== finalReply) {
@@ -257,11 +259,6 @@ export const useAgentStore = create<AgentStore>((set, get) => ({
       }
 
       if (streamError) throw new Error(streamError);
-
-      if (!finalReply && streamingText) {
-        assistantMessage = { ...assistantMessage, content: streamingText };
-        set({ messages: [...history, assistantMessage] });
-      }
 
       if (actions.length) {
         await executeActions(actions, router);

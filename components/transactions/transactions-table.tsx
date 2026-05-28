@@ -253,8 +253,8 @@ export function TransactionsTable({
         </TableBody>
       </Table>
 
-      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 text-sm text-muted-foreground">
-        <span>
+      <div className="relative flex items-center justify-center gap-2 border-t border-border px-4 py-3 text-sm text-muted-foreground">
+        <span className="absolute left-4">
           Page {safePage} / {totalPages}
         </span>
         <div className="flex items-center gap-1">
