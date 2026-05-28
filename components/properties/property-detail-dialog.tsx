@@ -50,6 +50,24 @@ function propertyDescription(property: Property): string {
   return `${property.name} is a tokenized real estate listing in ${location}. Ownership is represented by ${property.token_symbol} security tokens on ${chainLabel()}.${rentNote}`;
 }
 
+function deriveFinancialOverview(property: Property) {
+  const monthlyRent = Number(property.monthly_rent_eth ?? 0);
+  const tokenPrice = Number(property.token_sale_price_eth ?? 0);
+  const supply = Number(property.token_supply ?? 0);
+  const navEth = tokenPrice > 0 && supply > 0 ? tokenPrice * supply : 0;
+  const annualRentEth = monthlyRent > 0 ? monthlyRent * 12 : 0;
+
+  if (!navEth || !annualRentEth) return null;
+
+  const expectedRoi = (annualRentEth / navEth) * 100;
+  return {
+    expectedRoi: `${expectedRoi.toFixed(1)}%`,
+    netYield: `${(expectedRoi * 0.66).toFixed(1)}%`,
+    payback: `${(navEth / annualRentEth).toFixed(1)} Years`,
+    occupancy: property.rent_enabled ? "90%+" : "—",
+  };
+}
+
 export function PropertyDetailDialog({
   property: initialProperty,
   open,
@@ -93,6 +111,7 @@ export function PropertyDetailDialog({
   const investable = property ? propertyIsInvestable(property) : false;
   const unitValue = propertyUnitValue(property);
   const rentReady = Boolean(property?.rent_enabled && monthlyRent > 0);
+  const financials = property ? deriveFinancialOverview(property) : null;
 
   const effectivePrimaryAction = onPrimaryAction ?? onAction;
   const effectivePrimaryDisabled = primaryDisabled ?? actionDisabled;
@@ -122,7 +141,7 @@ export function PropertyDetailDialog({
           isInvestor
             ? investorPropertyDetailDialogClass
             : cn(
-                "flex min-h-0 w-[min(calc(100vw-1rem),640px)] max-w-[640px] max-h-[min(92vh,920px)] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl",
+                "flex min-h-0 w-[min(calc(100vw-1rem),580px)] max-w-[580px] max-h-[min(92vh,920px)] flex-col gap-0 overflow-hidden p-0 sm:rounded-2xl",
               )
         }
       >
@@ -157,29 +176,29 @@ export function PropertyDetailDialog({
         ) : (
           <>
             <div className={propertyDetailScrollBodyClass}>
-              <div className="p-5 pb-4">
-                <DialogHeader className="space-y-3 p-0 text-left">
+              <div className="p-4 pb-3.5">
+                <DialogHeader className="space-y-2.5 p-0 text-left">
                   <div className="flex flex-wrap items-start justify-between gap-2 pr-6">
                     <div className="min-w-0 flex-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <DialogTitle className="text-lg font-semibold leading-tight">
+                      <div className="flex flex-wrap items-center gap-1.5">
+                        <DialogTitle className="text-base font-semibold leading-tight tracking-tight">
                           #{property.id} {property.name}
                         </DialogTitle>
-                        <Badge variant="outline" className="font-mono text-[10px]">
+                        <Badge variant="outline" className="h-4 px-1.5 font-mono text-[9px] font-semibold uppercase tracking-wide">
                           {property.token_symbol}
                         </Badge>
                       </div>
-                      <div className="mt-1.5 flex flex-wrap items-center gap-2">
+                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
                         {statusLabel ? (
-                          <Badge variant={statusLabel.toLowerCase().includes("not") ? "muted" : "success"} className="text-[10px]">
+                          <Badge variant={statusLabel.toLowerCase().includes("not") ? "muted" : "success"} className="h-5 px-1.5 text-[10px]">
                             {statusLabel}
                           </Badge>
                         ) : rentReady ? (
-                          <Badge variant="success" className="text-[10px]">
+                          <Badge variant="success" className="h-5 px-1.5 text-[10px]">
                             Rent ready
                           </Badge>
                         ) : (
-                          <Badge variant="muted" className="text-[10px]">
+                          <Badge variant="muted" className="h-5 px-1.5 text-[10px]">
                             Rent not set
                           </Badge>
                         )}
@@ -197,37 +216,39 @@ export function PropertyDetailDialog({
                   </div>
                 </DialogHeader>
 
-                <div className="mt-4">
+                <div className="mt-3">
                   <PropertyImageGallery
+                    variant="compact"
                     images={property.images}
                     propertyId={property.id}
                     title={property.name}
                   />
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-5">
-                  <StatPill label="Monthly rent" value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "—"} />
-                  <StatPill label="Property value" value={formatCurrency(property.total_value)} />
-                  <StatPill label="Supply" value={formatNumber(supply)} />
-                  <StatPill label="Ownership sold" value={`${soldPct.toFixed(1)}%`} />
-                  <StatPill
-                    label="Token price"
-                    value={tokenPrice > 0 ? `${tokenPrice.toFixed(4)} ETH` : "—"}
-                    subValue={unitValue > 0 ? `~${formatCurrency(unitValue)}` : undefined}
-                  />
-                </div>
-
-                <div className="mt-3 rounded-lg border border-border bg-muted/20 px-3 py-2.5">
-                  <div className="mb-1.5 flex items-center justify-between text-[11px]">
-                    <span className="text-muted-foreground">Token sale progress</span>
-                    <span className="font-semibold tabular-nums">
-                      {formatNumber(sold)} / {formatNumber(supply)}
-                    </span>
+                <div className="mt-3 rounded-lg border border-border bg-card px-4 py-3 shadow-sm">
+                  <div className="grid grid-flow-col auto-cols-max items-start justify-between gap-x-4">
+                    <StatPill label="Monthly rent" value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "—"} />
+                    <StatPill label="Property value" value={formatCurrency(property.total_value)} />
+                    <StatPill label="Supply" value={formatNumber(supply)} />
+                    <StatPill label="Ownership sold" value={`${soldPct.toFixed(1)}%`} />
+                    <StatPill
+                      label="Token price"
+                      value={tokenPrice > 0 ? `${tokenPrice.toFixed(4)} ETH` : "—"}
+                      subValue={unitValue > 0 ? `~${formatCurrency(unitValue)}` : undefined}
+                    />
                   </div>
-                  <Progress value={soldPct} className="h-1.5" />
+                  <div className="mt-2.5 border-t border-border pt-2.5">
+                    <div className="mb-1 flex items-center justify-between text-[11px]">
+                      <span className="text-muted-foreground">Token sale progress</span>
+                      <span className="font-semibold tabular-nums text-foreground">
+                        {formatNumber(sold)} / {formatNumber(supply)}
+                      </span>
+                    </div>
+                    <Progress value={soldPct} className="h-1 bg-muted" indicatorClassName="bg-primary" />
+                  </div>
                 </div>
 
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
                   <InfoCard title="Property description">
                     <p className="text-xs leading-relaxed text-muted-foreground">
                       {propertyDescription(property)}
@@ -235,53 +256,45 @@ export function PropertyDetailDialog({
                   </InfoCard>
 
                   <InfoCard title="Property details">
-                    <InfoRow label="Listing ID" value={`#${property.id}`} />
+                    <InfoRow label="Property type" value="Residential" />
+                    <InfoRow label="Location" value={property.location || "—"} />
                     <InfoRow label="Token symbol" value={property.token_symbol} />
-                    <InfoRow label="Token price" value={`${tokenPrice.toFixed(4)} ETH`} />
-                    <InfoRow label="Per-token value" value={formatCurrency(unitValue)} />
+                    <InfoRow label="Total supply" value={formatNumber(supply)} />
                     <InfoRow label="Available tokens" value={formatNumber(available)} />
                     <InfoRow
-                      label="Rent program"
-                      value={property.rent_enabled ? "Enabled" : "Disabled"}
+                      label="Monthly rent"
+                      value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "Not set"}
                     />
                   </InfoCard>
 
-                  <InfoCard title="Payment information">
-                    <InfoRow label="Payment currency" value="ETH" />
-                    <InfoRow label="Payment network" value={chainLabel()} />
-                    <InfoRow
-                      label="Monthly rent"
-                      value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "Not configured"}
-                    />
-                    <InfoRow
-                      label="Billing cycle"
-                      value={property.rent_cycle_label || "Monthly in advance"}
-                    />
-                    <InfoRow
-                      label="Cycle status"
-                      value={
-                        property.current_cycle_paid ? "Paid" : property.can_pay_rent ? "Due" : "—"
-                      }
-                    />
+                  <InfoCard title="Financial overview">
+                    {financials ? (
+                      <>
+                        <InfoRow label="Expected ROI (annual)" value={financials.expectedRoi} />
+                        <InfoRow label="Net yield (annual)" value={financials.netYield} />
+                        <InfoRow label="Payback period" value={financials.payback} />
+                        <InfoRow label="Target occupancy" value={financials.occupancy} />
+                      </>
+                    ) : (
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        Configure monthly rent on this listing to display yield estimates.
+                      </p>
+                    )}
                   </InfoCard>
 
                   <InfoCard title="Smart contract">
                     <CopyRow
-                      label="Security token"
+                      label="Contract address"
                       value={property.token_address}
                       fallback="Pending deployment"
                       explorer={
                         property.token_address ? addressExplorerUrl(property.token_address) : undefined
                       }
                     />
-                    <InfoRow
-                      label="Property NFT"
-                      value={property.nft_token_id != null ? `#${property.nft_token_id}` : "Not minted"}
-                    />
-                    <InfoRow label="Token standard" value="ERC-20 SecurityToken" />
+                    <InfoRow label="Token standard" value={property.nft_token_id != null ? "ERC-721" : property.token_address ? "ERC-20" : "—"} />
                     <CopyRow label="Created by" value={property.owner_wallet} fallback="—" mono />
                     <InfoRow
-                      label="Verified on-chain"
+                      label="Verified"
                       value={
                         property.token_address ? (
                           <span className="inline-flex items-center gap-1 text-success">
@@ -299,11 +312,11 @@ export function PropertyDetailDialog({
 
             <Separator />
 
-            <DialogFooter className="flex shrink-0 flex-col gap-2 border-t border-border bg-card/95 px-5 py-3 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-left text-[11px] leading-snug text-muted-foreground sm:max-w-[55%]">
-                {footerHint}
-              </p>
-              <div className="flex w-full shrink-0 gap-2 sm:w-auto">
+            <DialogFooter className="flex shrink-0 flex-row items-center justify-between gap-2 border-t border-border bg-card px-4 py-2">
+              <span className="min-w-0 truncate font-mono text-[11px] text-muted-foreground">
+                {wallet ? shortAddress(wallet, 6, 4) : property.owner_wallet ? shortAddress(property.owner_wallet, 6, 4) : footerHint}
+              </span>
+              <div className="flex shrink-0 gap-2">
                 <Button type="button" variant="outline" size="sm" onClick={() => onOpenChange(false)}>
                   Close
                 </Button>
@@ -339,7 +352,7 @@ function StatPill({ label, value, subValue }: { label: string; value: React.Reac
       <div className="whitespace-nowrap text-[10px] font-semibold uppercase leading-none tracking-wide text-muted-foreground">
         {label}
       </div>
-      <div className="mt-1.5 truncate text-lg font-semibold leading-tight tabular-nums text-foreground">
+      <div className="mt-1.5 max-w-[7.25rem] truncate text-[18px] font-semibold leading-tight tabular-nums text-foreground">
         {value}
       </div>
       {subValue ? <div className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{subValue}</div> : null}
@@ -349,18 +362,18 @@ function StatPill({ label, value, subValue }: { label: string; value: React.Reac
 
 function InfoCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-xl border border-border bg-card p-3 shadow-sm">
+    <div className="rounded-lg border border-border bg-muted/20 p-2.5">
       <h4 className="text-xs font-semibold text-foreground">{title}</h4>
-      <div className="mt-2 space-y-1.5">{children}</div>
+      <div className="mt-1.5 space-y-1.5">{children}</div>
     </div>
   );
 }
 
 function InfoRow({ label, value }: { label: string; value: React.ReactNode }) {
   return (
-    <div className="flex items-start justify-between gap-3 text-xs">
-      <span className="shrink-0 text-muted-foreground">{label}</span>
-      <span className="text-right font-medium text-foreground">{value}</span>
+    <div className="flex items-center justify-between gap-3 text-xs">
+      <span className="min-w-0 text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-right font-medium text-foreground">{value}</span>
     </div>
   );
 }
@@ -395,7 +408,7 @@ function CopyRow({
 
   return (
     <div className="flex items-center justify-between gap-2 text-xs">
-      <span className="text-muted-foreground">{label}</span>
+      <span className="shrink-0 text-muted-foreground">{label}</span>
       <div className="flex min-w-0 items-center gap-1">
         {explorer ? (
           <a

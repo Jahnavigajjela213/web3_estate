@@ -60,8 +60,7 @@ const ACTION_TINTS: { bg: string; ring: string; icon: string }[] = [
 
 function ThinkingDots() {
   return (
-    <div className="flex items-center gap-2 px-1 py-1 text-[12.5px] font-medium text-muted-foreground">
-      <span>Agent is typing</span>
+    <div className="flex items-center px-1 py-1 text-muted-foreground">
       <span className="flex items-center gap-1" aria-hidden="true">
         {[0, 1, 2].map((i) => (
           <motion.span

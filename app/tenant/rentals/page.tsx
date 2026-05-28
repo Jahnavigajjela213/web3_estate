@@ -30,6 +30,7 @@ import { useCurrentWallet } from "@/components/investor/use-current-wallet";
 import { sendPayRentTx } from "@/components/investor/contract-actions";
 import { useTenantDistributionPreview } from "@/lib/queries";
 import {
+  clearPendingWorkflowActions,
   emitWorkflowCompletion,
   isWorkflowModalAction,
   preventCloseFromWorkflowBubble,
@@ -164,83 +165,85 @@ function RentalCard({
   }, [property.id]);
 
   return (
-    <Card
-      role="button"
-      tabIndex={0}
-      className="group cursor-pointer overflow-hidden transition-transform duration-200 hover:-translate-y-0.5"
-      onClick={() => setDetailOpen(true)}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          setDetailOpen(true);
-        }
-      }}
-    >
-      <PropertyImageCarousel images={property.images?.slice(0, 1)} propertyId={property.id} title={property.name} className="h-44" />
-      <CardContent className="space-y-3 p-4">
-        <div className="flex items-start justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex min-w-0 items-center gap-1.5">
-              <span className="shrink-0 text-base font-semibold text-foreground">#{property.id}</span>
-              <h3 className="truncate text-base font-semibold">{property.name}</h3>
-              <Badge variant="outline" className="rounded-md px-2 py-0 font-mono text-xs">{property.token_symbol}</Badge>
+    <>
+      <Card
+        role="button"
+        tabIndex={0}
+        className="group cursor-pointer overflow-hidden transition-transform duration-200 hover:-translate-y-0.5"
+        onClick={() => setDetailOpen(true)}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault();
+            setDetailOpen(true);
+          }
+        }}
+      >
+        <PropertyImageCarousel images={property.images?.slice(0, 1)} propertyId={property.id} title={property.name} className="h-44" />
+        <CardContent className="space-y-3 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <div className="flex min-w-0 items-center gap-1.5">
+                <span className="shrink-0 text-base font-semibold text-foreground">#{property.id}</span>
+                <h3 className="truncate text-base font-semibold">{property.name}</h3>
+                <Badge variant="outline" className="rounded-md px-2 py-0 font-mono text-xs">{property.token_symbol}</Badge>
+              </div>
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" /> {property.location}
+              </div>
             </div>
-            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3" /> {property.location}
+            <Badge variant={isActiveRental ? "success" : property.rent_enabled ? "success" : "warning"} className="shrink-0 rounded-md">
+              {isActiveRental ? "Renting" : property.rent_enabled ? "Rent ready" : "Rent not set"}
+            </Badge>
+          </div>
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <Fact label="Monthly Rent" value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "Not set"} />
+            <Fact label="Property Value" value={formatCurrency(property.total_value)} />
+            <Fact label="Supply" value={formatNumber(supply)} />
+            <Fact label="Ownership Sold" value={`${soldPct.toFixed(1)}%`} />
+          </div>
+          <div>
+            <div className="mb-1.5 flex items-center justify-between text-xs">
+              <span className="text-muted-foreground">Token Sale Progress</span>
+              <span className="font-medium tabular-nums">{formatNumber(sold)} / {formatNumber(supply)}</span>
             </div>
+            <Progress value={soldPct} className="h-1.5" />
           </div>
-          <Badge variant={isActiveRental ? "success" : property.rent_enabled ? "success" : "warning"} className="shrink-0 rounded-md">
-            {isActiveRental ? "Renting" : property.rent_enabled ? "Rent ready" : "Rent not set"}
-          </Badge>
-        </div>
-        <div className="grid grid-cols-2 gap-2 text-xs">
-          <Fact label="Monthly Rent" value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "Not set"} />
-          <Fact label="Property Value" value={formatCurrency(property.total_value)} />
-          <Fact label="Supply" value={formatNumber(supply)} />
-          <Fact label="Ownership Sold" value={`${soldPct.toFixed(1)}%`} />
-        </div>
-        <div>
-          <div className="mb-1.5 flex items-center justify-between text-xs">
-            <span className="text-muted-foreground">Token Sale Progress</span>
-            <span className="font-medium tabular-nums">{formatNumber(sold)} / {formatNumber(supply)}</span>
+          <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
+            <div className="min-w-0 text-[11px] text-muted-foreground font-mono">{shortAddress(property.token_address, 6, 4)}</div>
+            <Button
+              size="sm"
+              variant={property.current_cycle_paid ? "secondary" : "default"}
+              disabled={!wallet || !property.rent_enabled || property.current_cycle_paid}
+              onClick={(event) => {
+                event.stopPropagation();
+                setOpen(true);
+              }}
+            >
+              {property.current_cycle_paid ? (
+                <>
+                  <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
+                  Paid ✔
+                </>
+              ) : (
+                <>
+                  <Receipt className="mr-1 h-3.5 w-3.5" />
+                  Rent Now
+                </>
+              )}
+            </Button>
           </div>
-          <Progress value={soldPct} className="h-1.5" />
-        </div>
-        <div className="flex items-center justify-between gap-3 border-t border-border pt-3">
-          <div className="min-w-0 text-[11px] text-muted-foreground font-mono">{shortAddress(property.token_address, 6, 4)}</div>
-          <Button
-            size="sm"
-            variant={property.current_cycle_paid ? "secondary" : "default"}
-            disabled={!wallet || !property.rent_enabled || property.current_cycle_paid}
-            onClick={(event) => {
-              event.stopPropagation();
-              setOpen(true);
-            }}
-          >
-            {property.current_cycle_paid ? (
-              <>
-                <CheckCircle2 className="mr-1 h-3.5 w-3.5" />
-                Paid ✔
-              </>
-            ) : (
-              <>
-                <Receipt className="mr-1 h-3.5 w-3.5" />
-                Rent Now
-              </>
-            )}
-          </Button>
-        </div>
-        {property.current_cycle_paid ? (
-          <div className="rounded-md border border-success/25 bg-success/5 px-3 py-2 text-xs font-medium text-success">
-            Rent paid for this period.
-            {property.next_rent_due_at ? (
-              <span className="mt-0.5 block font-normal text-success/90">
-                Next due {formatDateTime(property.next_rent_due_at)}
-              </span>
-            ) : null}
-          </div>
-        ) : null}
-      </CardContent>
+          {property.current_cycle_paid ? (
+            <div className="rounded-md border border-success/25 bg-success/5 px-3 py-2 text-xs font-medium text-success">
+              Rent paid for this period.
+              {property.next_rent_due_at ? (
+                <span className="mt-0.5 block font-normal text-success/90">
+                  Next due {formatDateTime(property.next_rent_due_at)}
+                </span>
+              ) : null}
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
       <PropertyDetailDialog
         property={property}
         open={detailOpen}
@@ -254,7 +257,7 @@ function RentalCard({
         }}
       />
       <PayRentDialog property={property} wallet={wallet} open={open} onOpenChange={setOpen} />
-    </Card>
+    </>
   );
 }
 
@@ -268,6 +271,7 @@ function PayRentDialog({ property, wallet, open, onOpenChange }: { property: Pro
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
+    if (busy) return;
     if (!wallet || !property.id) return;
     // Defensive guard: if the dialog gets a SUBMIT_FORM event (from the
     // agent or otherwise) for a cycle that's already paid, do not open
@@ -283,6 +287,7 @@ function PayRentDialog({ property, wallet, open, onOpenChange }: { property: Pro
         : "next cycle";
       const errMsg = `Rent for ${property.name} is already paid for this cycle. Next due ${nextDue}.`;
       toast.info(errMsg);
+      clearPendingWorkflowActions("PAY_RENT");
       emitWorkflowCompletion({ modal: "PAY_RENT", status: "error", message: errMsg });
       onOpenChange(false);
       return;
@@ -300,6 +305,7 @@ function PayRentDialog({ property, wallet, open, onOpenChange }: { property: Pro
       setStep("confirm");
       await api.post(`/tenant/pay-rent/confirm/${property.id}`, { tx_hash: tx.hash, tenant_wallet: wallet });
       toast.success(`Rent paid! Block ${receipt?.blockNumber ?? "latest"}.`);
+      clearPendingWorkflowActions("PAY_RENT");
       emitWorkflowCompletion({
         modal: "PAY_RENT",
         status: "success",
@@ -313,6 +319,7 @@ function PayRentDialog({ property, wallet, open, onOpenChange }: { property: Pro
       onOpenChange(false);
       setStep("idle");
     } catch (err: any) {
+      clearPendingWorkflowActions("PAY_RENT");
       const errMsg = err?.message || "Rent payment failed.";
       toast.error(errMsg);
       emitWorkflowCompletion({ modal: "PAY_RENT", status: "error", message: errMsg });
@@ -326,6 +333,7 @@ function PayRentDialog({ property, wallet, open, onOpenChange }: { property: Pro
       if (!isWorkflowModalAction(action, "PAY_RENT")) return;
       if (action.property_id !== undefined && !workflowPropertyMatches(action, property.id)) return;
       if (action.type === "SUBMIT_FORM") {
+        setStep("prepare");
         const trySubmit = (attemptsLeft: number) => {
           window.setTimeout(() => {
             if (formRef.current) {
@@ -351,7 +359,8 @@ function PayRentDialog({ property, wallet, open, onOpenChange }: { property: Pro
           <DialogTitle>Pay Rent — {property.name}</DialogTitle>
           <DialogDescription>Send rent to the RentDistribution contract. Investors will receive their share automatically.</DialogDescription>
         </DialogHeader>
-        <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={onSubmit} className="space-y-4" data-workflow-form="PAY_RENT">
+          <input data-workflow-field="PAY_RENT.confirm" type="hidden" value="ready" readOnly />
           <div className="grid grid-cols-2 gap-3 rounded-lg border border-border bg-muted/30 p-3 text-xs">
             <Fact label="Monthly rent" value={`${monthlyRentEth.toFixed(4)} ETH`} />
             <Fact label="Wallet" value={shortAddress(wallet, 6, 4)} />

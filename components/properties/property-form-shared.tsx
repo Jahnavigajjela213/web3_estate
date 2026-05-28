@@ -27,9 +27,9 @@ export const propertyDialogBodyClass =
 export const propertyDetailScrollBodyClass =
   "scrollbar-thin min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-contain scroll-smooth";
 
-/** Investor detail modal shell — 512px (max-w-lg), height follows content up to min(92vh, 920px). */
+/** Investor detail modal shell — compact 580px shell shared with the property detail screenshots. */
 export const investorPropertyDetailDialogClass =
-  "flex h-fit w-full max-w-lg flex-col gap-0 overflow-hidden p-0 max-h-[min(92vh,920px)] sm:rounded-2xl";
+  "flex h-fit w-[min(calc(100vw-1rem),580px)] max-w-[580px] flex-col gap-0 overflow-hidden p-0 max-h-[min(92vh,920px)] sm:rounded-2xl";
 
 /** Investor detail scroll body (reserves ~48px for the pinned Invest footer). */
 export const investorPropertyDetailScrollBodyClass =

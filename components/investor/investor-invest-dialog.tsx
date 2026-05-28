@@ -22,8 +22,10 @@ import type { InvestmentPrepareResponse, Property } from "@/lib/types";
 import { investmentCostWei } from "@/components/investor/investor-utils";
 import { sendInvestmentTx } from "@/components/investor/contract-actions";
 import {
+  clearPendingWorkflowActions,
   emitWorkflowCompletion,
   focusWorkflowField,
+  getWorkflowFormValues,
   isWorkflowModalAction,
   preventCloseFromWorkflowBubble,
   subscribeWorkflowAction,
@@ -52,36 +54,41 @@ export function InvestorInvestDialog({
 
   async function onSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!wallet || !property.token_address || tokenAmount <= 0) return;
+    if (busy) return;
+    const workflowValues = getWorkflowFormValues("INVEST_PROPERTY");
+    const submitAmount = Math.max(0, Math.trunc(Number(workflowValues.token_amount ?? amount ?? 0)));
+    if (!wallet || !property.token_address || submitAmount <= 0) return;
     setBusy(true);
     try {
       setStep("prepare");
       const prepared = await api.post<InvestmentPrepareResponse>("/investments/prepare", {
         property_id: property.id,
         investor_wallet: wallet,
-        token_amount: tokenAmount,
+        token_amount: submitAmount,
       });
       setStep("wallet");
       const tx = await sendInvestmentTx({
         tokenAddress: property.token_address,
         propertyId: property.id,
-        tokenAmount,
+        tokenAmount: submitAmount,
         valueWei: prepared.eth_amount_wei,
       });
       const receipt = await tx.wait();
       setStep("confirm");
       await api.post(`/investments/${prepared.investment_id}/confirm`, { tx_hash: tx.hash });
       toast.success(`Investment confirmed in block ${receipt?.blockNumber ?? "latest"}.`);
+      clearPendingWorkflowActions("INVEST_PROPERTY");
       emitWorkflowCompletion({
         modal: "INVEST_PROPERTY",
         status: "success",
-        message: `Investment confirmed: ${tokenAmount} ${property.token_symbol || "tokens"} in ${property.name}.`,
+        message: `Investment confirmed: ${submitAmount} ${property.token_symbol || "tokens"} in ${property.name}.`,
       });
       queryClient.invalidateQueries({ queryKey: ["investor"] });
       queryClient.invalidateQueries({ queryKey: queryKeys.properties });
       onOpenChange(false);
       setStep("idle");
     } catch (err: any) {
+      clearPendingWorkflowActions("INVEST_PROPERTY");
       const errMsg = err?.message || "Investment failed.";
       toast.error(errMsg);
       emitWorkflowCompletion({ modal: "INVEST_PROPERTY", status: "error", message: errMsg });
@@ -91,7 +98,7 @@ export function InvestorInvestDialog({
   }
 
   useEffect(() => {
-    return subscribeWorkflowAction((action) => {
+    const handleAction = (action: Parameters<Parameters<typeof subscribeWorkflowAction>[0]>[0]) => {
       if (!isWorkflowModalAction(action, "INVEST_PROPERTY")) return;
       if (action.property_id !== undefined && !workflowPropertyMatches(action, property.id)) return;
       if (action.type === "FILL_FIELD" && action.field === "token_amount") {
@@ -103,6 +110,7 @@ export function InvestorInvestDialog({
         return;
       }
       if (action.type === "SUBMIT_FORM") {
+        setStep("prepare");
         const trySubmit = (attemptsLeft: number) => {
           window.setTimeout(() => {
             if (formRef.current) {
@@ -114,7 +122,9 @@ export function InvestorInvestDialog({
         };
         trySubmit(24);
       }
-    });
+    };
+
+    return subscribeWorkflowAction(handleAction);
   }, [property.id]);
 
   return (
@@ -130,7 +140,7 @@ export function InvestorInvestDialog({
             Buy ownership tokens directly from the property SecurityToken contract.
           </DialogDescription>
         </DialogHeader>
-        <form ref={formRef} onSubmit={onSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={onSubmit} className="space-y-4" data-workflow-form="INVEST_PROPERTY">
           <div className="grid gap-1.5">
             <Label>Token amount</Label>
             <Input
