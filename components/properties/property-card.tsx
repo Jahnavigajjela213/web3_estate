@@ -89,13 +89,13 @@ export function PropertyCard({ property }: { property: Property }) {
         </PropertyImageCarousel>
 
       <div className="flex flex-1 flex-col gap-2.5 p-4">
-        <div className="flex items-start justify-between gap-3">
+        <div className="flex min-w-0 items-center gap-1.5">
           <div className="flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight">
             <span className="shrink-0 text-foreground">#{property.id}</span>
             <h3 className="min-w-0 truncate">{property.name}</h3>
             <Badge variant="outline" className="shrink-0 rounded-md px-2 py-0 font-mono text-xs">{property.token_symbol}</Badge>
           </div>
-          <Badge variant={property.token_address ? "success" : "warning"} className="shrink-0">
+          <Badge variant={property.token_address ? "success" : "warning"} className="h-5 shrink-0 rounded-md px-2 text-[10px]">
             {property.token_address ? "Ready" : "Setup pending"}
           </Badge>
         </div>
