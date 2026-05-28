@@ -2,6 +2,7 @@
 
 import { useQuery } from "@tanstack/react-query";
 import { api } from "./api";
+import { filterFullyCreatedProperties } from "./properties/visibility";
 import type {
   ClaimableRewardsSummary,
   DashboardSummary,
@@ -65,6 +66,7 @@ export function useProperties() {
   return useQuery({
     queryKey: queryKeys.properties,
     queryFn: () => api.get<Property[]>("/properties"),
+    select: filterFullyCreatedProperties,
     refetchInterval: POLL_MS,
   });
 }
@@ -230,6 +232,7 @@ export function useTenantProperties(wallet?: string | null) {
         "/tenant/properties",
         { tenant_wallet: wallet || undefined },
       ),
+    select: filterFullyCreatedProperties,
     refetchInterval: POLL_MS,
   });
 }
