@@ -65,10 +65,10 @@ const TYPE_META: Record<string, { color: string; icon: LucideIcon; label: string
 function statusBadge(status?: string) {
   const s = (status || "").toLowerCase();
   if (s === "completed" || s === "confirmed" || s === "success")
-    return <Badge variant="success">Completed</Badge>;
-  if (s === "pending" || s === "queued") return <Badge variant="warning">Pending</Badge>;
-  if (s === "failed" || s === "reverted") return <Badge variant="destructive">Failed</Badge>;
-  return <Badge variant="muted">{status || "—"}</Badge>;
+    return <Badge variant="success" className="text-sm">Completed</Badge>;
+  if (s === "pending" || s === "queued") return <Badge variant="warning" className="text-sm">Pending</Badge>;
+  if (s === "failed" || s === "reverted") return <Badge variant="destructive" className="text-sm">Failed</Badge>;
+  return <Badge variant="muted" className="text-sm">{status || "—"}</Badge>;
 }
 
 export function TransactionsTable({
@@ -177,7 +177,7 @@ export function TransactionsTable({
             options={[{ value: ALL_PROPERTIES, label: "All properties" }, ...propertyOptions]}
           />
         </div>
-        <span className="shrink-0 text-xs text-muted-foreground sm:text-right">
+        <span className="shrink-0 text-sm text-muted-foreground sm:text-right">
           {filtered.length} transaction{filtered.length === 1 ? "" : "s"}
         </span>
       </div>
@@ -185,12 +185,12 @@ export function TransactionsTable({
       <Table>
         <TableHeader>
           <TableRow className="hover:bg-transparent">
-            <TableHead>Type</TableHead>
-            <TableHead>Property</TableHead>
-            <TableHead>Wallet</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Date</TableHead>
+            <TableHead className="text-sm">Type</TableHead>
+            <TableHead className="text-sm">Property</TableHead>
+            <TableHead className="text-sm">Wallet</TableHead>
+            <TableHead className="text-right text-sm">Amount</TableHead>
+            <TableHead className="text-sm">Status</TableHead>
+            <TableHead className="text-sm">Date</TableHead>
             <TableHead className="w-12" />
           </TableRow>
         </TableHeader>
@@ -224,7 +224,7 @@ export function TransactionsTable({
                       <span className={cn("grid h-7 w-7 place-items-center rounded-md", meta.color)}>
                         <Icon className="h-3.5 w-3.5" />
                       </span>
-                      <span className="text-xs font-medium">{meta.label}</span>
+                      <span className="text-sm font-medium">{meta.label}</span>
                     </div>
                   </TableCell>
                   <TableCell>
@@ -232,15 +232,15 @@ export function TransactionsTable({
                       {t.property_name || (t.property_id ? `#${t.property_id}` : "—")}
                     </span>
                   </TableCell>
-                  <TableCell className="font-mono text-xs">
+                  <TableCell className="font-mono text-sm">
                     {t.wallet_address ? shortAddress(t.wallet_address, 6, 4) : "—"}
                   </TableCell>
                   <TableCell className="text-right tabular-nums">
                     <span className="text-sm font-medium">{t.display_amount}</span>
-                    <span className="ml-1 text-xs text-muted-foreground">{t.amount_unit}</span>
+                    <span className="ml-1 text-sm text-muted-foreground">{t.amount_unit}</span>
                   </TableCell>
                   <TableCell>{statusBadge(t.status)}</TableCell>
-                  <TableCell className="text-xs text-muted-foreground">{formatDateTime(t.timestamp)}</TableCell>
+                  <TableCell className="text-sm text-muted-foreground">{formatDateTime(t.timestamp)}</TableCell>
                   <TableCell>
                     <Button variant="ghost" size="icon" className="h-7 w-7">
                       <ArrowUpRight className="h-3.5 w-3.5" />
@@ -253,7 +253,7 @@ export function TransactionsTable({
         </TableBody>
       </Table>
 
-      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 text-xs text-muted-foreground">
+      <div className="flex items-center justify-between gap-2 border-t border-border px-4 py-3 text-sm text-muted-foreground">
         <span>
           Page {safePage} / {totalPages}
         </span>

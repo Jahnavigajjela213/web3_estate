@@ -14,9 +14,10 @@ import { EmptyState } from "@/components/common/empty";
 import { InvestmentSimulationWorkbench } from "@/components/investor/investment-simulation-workbench";
 import { useInvestorYieldSummary, usePortfolio, useProperties, useWalletBalances } from "@/lib/queries";
 import { cn, formatCurrency, shortAddress } from "@/lib/utils";
-import { pickColor } from "@/lib/charts";
 import { buildInvestorMetrics, holdingValue, humanTokenAmount, ownershipPercent } from "@/components/investor/investor-utils";
 import { useCurrentWallet } from "@/components/investor/use-current-wallet";
+
+const ALLOCATION_COLORS = ["#4f46e5", "#22c6e8", "#8b5cf6", "#06b6d4", "#a855f7"];
 
 export default function InvestorPortfolioPage() {
   const wallet = useCurrentWallet();
@@ -89,18 +90,41 @@ export default function InvestorPortfolioPage() {
                 <div className="grid h-[260px] place-items-center text-sm text-muted-foreground">No holdings yet.</div>
               ) : (
                 <>
-                  <ResponsiveContainer width="100%" height={220}>
+                  <ResponsiveContainer width="100%" height={270}>
                     <RePieChart>
-                      <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" innerRadius={58} outerRadius={86} paddingAngle={2} stroke="hsl(var(--card))" strokeWidth={2}>
-                        {chartData.map((item, index) => <Cell key={item.id} fill={pickColor(index)} />)}
+                      <Pie
+                        data={chartData}
+                        dataKey="value"
+                        nameKey="name"
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={74}
+                        outerRadius={116}
+                        paddingAngle={4}
+                        cornerRadius={24}
+                        stroke="hsl(var(--card))"
+                        strokeWidth={0}
+                      >
+                        {chartData.map((item, index) => (
+                          <Cell key={item.id} fill={ALLOCATION_COLORS[index % ALLOCATION_COLORS.length]} />
+                        ))}
                       </Pie>
+                      <text
+                        x="50%"
+                        y="50%"
+                        textAnchor="middle"
+                        dominantBaseline="middle"
+                        className="fill-foreground text-[34px] font-semibold"
+                      >
+                        {new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(metrics.totalTokens)}
+                      </text>
                       <Tooltip contentStyle={{ background: "hsl(var(--popover))", border: "1px solid hsl(var(--border))", borderRadius: 8, fontSize: 12 }} formatter={(v: number) => [formatCurrency(v), "Value"]} />
                     </RePieChart>
                   </ResponsiveContainer>
                   <div className="space-y-1.5">
                     {chartData.map((item, index) => (
                       <div key={item.id} className="flex items-center justify-between text-xs">
-                        <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ background: pickColor(index) }} /> {item.name}</div>
+                        <div className="flex items-center gap-2"><span className="h-2 w-2 rounded-full" style={{ background: ALLOCATION_COLORS[index % ALLOCATION_COLORS.length] }} /> {item.name}</div>
                         <span className="tabular-nums text-muted-foreground">{formatCurrency(item.value)}</span>
                       </div>
                     ))}

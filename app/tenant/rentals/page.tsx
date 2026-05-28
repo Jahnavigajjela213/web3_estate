@@ -180,20 +180,20 @@ function RentalCard({
       >
         <PropertyImageCarousel images={property.images?.slice(0, 1)} propertyId={property.id} title={property.name} className="h-44" />
         <CardContent className="space-y-3 p-4">
-          <div className="min-w-0">
-            <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
               <div className="flex min-w-0 items-center gap-1.5">
                 <span className="shrink-0 text-base font-semibold text-foreground">#{property.id}</span>
                 <h3 className="truncate text-base font-semibold">{property.name}</h3>
                 <Badge variant="outline" className="shrink-0 rounded-md px-2 py-0 font-mono text-xs">{property.token_symbol}</Badge>
               </div>
-              <Badge variant={isActiveRental ? "success" : property.rent_enabled ? "success" : "warning"} className="h-5 shrink-0 rounded-md px-2 text-[10px]">
-                {isActiveRental ? "Renting" : property.rent_enabled ? "Rent ready" : "Rent not set"}
-              </Badge>
+              <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <MapPin className="h-3 w-3" /> {property.location}
+              </div>
             </div>
-            <div className="mt-1 flex items-center gap-1.5 text-xs text-muted-foreground">
-              <MapPin className="h-3 w-3" /> {property.location}
-            </div>
+            <Badge variant={isActiveRental ? "success" : property.rent_enabled ? "success" : "warning"} className="h-5 shrink-0 rounded-md px-2 text-[10px]">
+              {isActiveRental ? "Renting" : property.rent_enabled ? "Rent ready" : "Rent not set"}
+            </Badge>
           </div>
           <div className="grid grid-cols-2 gap-2 text-xs">
             <Fact label="Monthly Rent" value={monthlyRent > 0 ? `${monthlyRent.toFixed(4)} ETH` : "Not set"} />

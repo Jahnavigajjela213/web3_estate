@@ -188,30 +188,30 @@ export function PropertyDetailDialog({
                           {property.token_symbol}
                         </Badge>
                       </div>
-                      <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                        {statusLabel ? (
-                          <Badge variant={statusLabel.toLowerCase().includes("not") ? "muted" : "success"} className="h-5 px-1.5 text-[10px]">
-                            {statusLabel}
-                          </Badge>
-                        ) : rentReady ? (
-                          <Badge variant="success" className="h-5 px-1.5 text-[10px]">
-                            Rent ready
-                          </Badge>
-                        ) : (
-                          <Badge variant="muted" className="h-5 px-1.5 text-[10px]">
-                            Rent not set
-                          </Badge>
-                        )}
-                        {isActiveRental ? (
-                          <Badge variant="outline" className="text-[10px]">
-                            Active rental
-                          </Badge>
-                        ) : null}
-                      </div>
                       <p className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                         <MapPin className="h-3 w-3 shrink-0" />
                         {property.location || "—"}
                       </p>
+                    </div>
+                    <div className="flex shrink-0 flex-wrap justify-end gap-1.5">
+                      {statusLabel ? (
+                        <Badge variant={statusLabel.toLowerCase().includes("not") ? "muted" : "success"} className="h-5 px-1.5 text-[10px]">
+                          {statusLabel}
+                        </Badge>
+                      ) : rentReady ? (
+                        <Badge variant="success" className="h-5 px-1.5 text-[10px]">
+                          Rent ready
+                        </Badge>
+                      ) : (
+                        <Badge variant="muted" className="h-5 px-1.5 text-[10px]">
+                          Rent not set
+                        </Badge>
+                      )}
+                      {isActiveRental ? (
+                        <Badge variant="outline" className="h-5 px-1.5 text-[10px]">
+                          Active rental
+                        </Badge>
+                      ) : null}
                     </div>
                   </div>
                 </DialogHeader>

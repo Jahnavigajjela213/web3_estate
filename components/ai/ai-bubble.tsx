@@ -289,6 +289,7 @@ export function AIBubble() {
   const lastMessages = messages.slice(-40);
   const pill = getStatePill(state);
   const busy = state === "thinking";
+  const showAgentDots = state === "thinking" || state === "transcribing" || state === "speaking";
   const isListening = state === "listening" || state === "recording";
   const isSpeaking = state === "speaking";
   const hasUserConversation = messages.some((m) => m.role === "user");
@@ -410,7 +411,7 @@ export function AIBubble() {
                   </>
                 ) : (
                   lastMessages.map((msg, i) => {
-                    if (!msg.content && msg.role === "assistant" && !busy) return null;
+                    if (!msg.content && msg.role === "assistant" && !showAgentDots) return null;
                     const isUser = msg.role === "user";
                     return (
                       <div
@@ -433,7 +434,7 @@ export function AIBubble() {
                               : "rounded-bl-md border border-border/50 bg-background/80 text-foreground",
                           )}
                         >
-                          {msg.content || (msg.role === "assistant" && busy ? <ThinkingDots /> : null)}
+                          {msg.content || (msg.role === "assistant" && showAgentDots ? <ThinkingDots /> : null)}
                         </div>
                       </div>
                     );
@@ -441,7 +442,7 @@ export function AIBubble() {
                 )}
 
                 <AnimatePresence>
-                  {busy && !showWelcome && (
+                  {showAgentDots && !showWelcome && (
                       <motion.div
                         key="agent-typing"
                         initial={{ opacity: 0, y: 4 }}

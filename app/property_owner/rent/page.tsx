@@ -93,12 +93,14 @@ export default function RentManagementPage() {
         </div>
 
         <Card>
-          <CardHeader>
+          <CardHeader className="pb-2">
             <CardTitle>Properties</CardTitle>
             <CardDescription>Set monthly rent; blockchain sync is handled automatically.</CardDescription>
           </CardHeader>
-          <CardContent className="px-0 pb-0">
-            <PropertiesRentTable properties={properties.data ?? []} loading={properties.isLoading} />
+          <CardContent className="px-0 pb-3">
+            <div className="max-h-[310px] overflow-y-auto scrollbar-thin">
+              <PropertiesRentTable properties={properties.data ?? []} loading={properties.isLoading} />
+            </div>
           </CardContent>
         </Card>
 
@@ -112,10 +114,10 @@ export default function RentManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead>Tenant</TableHead>
-                    <TableHead>Property</TableHead>
-                    <TableHead>Amount</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead className="text-sm">Tenant</TableHead>
+                    <TableHead className="text-sm">Property</TableHead>
+                    <TableHead className="text-sm">Amount</TableHead>
+                    <TableHead className="text-sm">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -136,7 +138,7 @@ export default function RentManagementPage() {
                   ) : (
                     (payments.data ?? []).slice(0, 8).map((p) => (
                       <TableRow key={p.id ?? p.tx_hash}>
-                        <TableCell className="font-mono text-xs">
+                        <TableCell className="font-mono text-sm">
                           <a
                             href={txExplorerUrl(p.tx_hash)}
                             target="_blank"
@@ -146,13 +148,13 @@ export default function RentManagementPage() {
                             {shortAddress(p.tenant_wallet, 6, 4)}
                           </a>
                         </TableCell>
-                        <TableCell className="text-xs">
+                        <TableCell className="text-sm">
                           {p.property_name ?? `#${p.property_id}`}
                         </TableCell>
-                        <TableCell className="tabular-nums text-xs">
+                        <TableCell className="tabular-nums text-sm">
                           {Number(p.amount_eth).toFixed(4)} ETH
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-sm text-muted-foreground">
                           {formatDateTime(p.payment_date)}
                         </TableCell>
                       </TableRow>
@@ -172,10 +174,10 @@ export default function RentManagementPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="hover:bg-transparent">
-                    <TableHead>Property</TableHead>
-                    <TableHead>Distributed</TableHead>
-                    <TableHead>Investors</TableHead>
-                    <TableHead>Date</TableHead>
+                    <TableHead className="text-sm">Property</TableHead>
+                    <TableHead className="text-sm">Distributed</TableHead>
+                    <TableHead className="text-sm">Investors</TableHead>
+                    <TableHead className="text-sm">Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -196,16 +198,16 @@ export default function RentManagementPage() {
                   ) : (
                     (distributions.data ?? []).slice(0, 8).map((d) => (
                       <TableRow key={d.id ?? d.distribution_tx_hash}>
-                        <TableCell className="text-xs">
+                        <TableCell className="text-sm">
                           {d.property_name ?? `#${d.property_id}`}
                         </TableCell>
-                        <TableCell className="tabular-nums text-xs">
+                        <TableCell className="tabular-nums text-sm">
                           {(Number(d.total_distributed) / 1e18).toFixed(4)} ETH
                         </TableCell>
-                        <TableCell className="tabular-nums text-xs">
+                        <TableCell className="tabular-nums text-sm">
                           {d.investor_count}
                         </TableCell>
-                        <TableCell className="text-xs text-muted-foreground">
+                        <TableCell className="text-sm text-muted-foreground">
                           {formatDateTime(d.distributed_at)}
                         </TableCell>
                       </TableRow>
@@ -229,13 +231,13 @@ function PropertiesRentTable({
   loading?: boolean;
 }) {
   return (
-    <Table>
+    <Table className="text-xs">
       <TableHeader>
         <TableRow className="hover:bg-transparent">
-          <TableHead>Property</TableHead>
-          <TableHead>Monthly Rent</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Actions</TableHead>
+          <TableHead className="h-8 py-1">Property</TableHead>
+          <TableHead className="h-8 py-1">Monthly Rent</TableHead>
+          <TableHead className="h-8 py-1">Status</TableHead>
+          <TableHead className="h-8 py-1">Actions</TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -243,7 +245,7 @@ function PropertiesRentTable({
           Array.from({ length: 4 }).map((_, i) => (
             <TableRow key={i} className="hover:bg-transparent">
               <TableCell colSpan={4}>
-                <Skeleton className="h-9 w-full" />
+                <Skeleton className="h-7 w-full" />
               </TableCell>
             </TableRow>
           ))
@@ -282,24 +284,24 @@ function PropertyRentRow({ property }: { property: Property }) {
   }
 
   return (
-    <TableRow>
-      <TableCell>
+    <TableRow className="h-10">
+      <TableCell className="py-1.5">
         <div className="flex flex-col">
-          <span className="text-sm font-medium">{property.name}</span>
-          <span className="text-xs text-muted-foreground">{property.location}</span>
+          <span className="text-xs font-medium leading-tight">{property.name}</span>
+          <span className="text-[10px] leading-tight text-muted-foreground">{property.location}</span>
         </div>
       </TableCell>
-      <TableCell className="tabular-nums">
+      <TableCell className="py-1.5 tabular-nums">
         {monthly > 0 ? `${monthly.toFixed(4)} ETH` : <span className="text-muted-foreground">Not set</span>}
       </TableCell>
-      <TableCell>
+      <TableCell className="py-1.5">
         {property.token_address ? (
-          <Badge variant="success">Token deployed</Badge>
+          <Badge variant="success" className="h-5 px-2 text-[10px]">Token deployed</Badge>
         ) : (
-          <Badge variant="warning">Not deployed</Badge>
+          <Badge variant="warning" className="h-5 px-2 text-[10px]">Not deployed</Badge>
         )}
       </TableCell>
-      <TableCell>
+      <TableCell className="py-1.5">
         <div className="flex gap-1.5">
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>

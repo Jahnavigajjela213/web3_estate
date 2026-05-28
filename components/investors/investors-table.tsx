@@ -93,6 +93,17 @@ export function InvestorsTable({
         });
       });
 
+    users.forEach((user) => {
+      const key = user.wallet_address.toLowerCase();
+      if (map.has(key)) return;
+      map.set(key, {
+        wallet: user.wallet_address,
+        user,
+        positions: [],
+        totalOwnershipBps: 0,
+      });
+    });
+
     return Array.from(map.values()).sort((a, b) => b.totalOwnershipBps - a.totalOwnershipBps);
   }, [previews, properties, users]);
 

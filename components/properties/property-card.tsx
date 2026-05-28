@@ -89,7 +89,7 @@ export function PropertyCard({ property }: { property: Property }) {
         </PropertyImageCarousel>
 
       <div className="flex flex-1 flex-col gap-2.5 p-4">
-        <div className="flex min-w-0 items-center gap-1.5">
+        <div className="flex items-start justify-between gap-3">
           <div className="flex min-w-0 items-center gap-1.5 text-base font-semibold leading-tight">
             <span className="shrink-0 text-foreground">#{property.id}</span>
             <h3 className="min-w-0 truncate">{property.name}</h3>
