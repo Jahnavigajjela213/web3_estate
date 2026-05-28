@@ -253,10 +253,7 @@ export function TransactionsTable({
         </TableBody>
       </Table>
 
-      <div className="relative flex items-center justify-center gap-2 border-t border-border px-4 py-3 text-sm text-muted-foreground">
-        <span className="absolute left-4">
-          Page {safePage} / {totalPages}
-        </span>
+      <div className="flex flex-col items-center justify-center gap-1.5 border-t border-border px-4 py-3 text-sm text-muted-foreground">
         <div className="flex items-center gap-1">
           <Button
             variant="outline"
@@ -278,6 +275,9 @@ export function TransactionsTable({
             <ChevronRight className="h-3.5 w-3.5" />
           </Button>
         </div>
+        <span className="text-xs tabular-nums text-muted-foreground">
+          Page {safePage} / {totalPages}
+        </span>
       </div>
 
       <TransactionDialog tx={active} onClose={() => setActive(null)} />

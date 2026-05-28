@@ -76,6 +76,12 @@ function ThinkingDots() {
   );
 }
 
+function isEditableTarget(target: EventTarget | null): boolean {
+  if (!(target instanceof HTMLElement)) return false;
+  const tagName = target.tagName.toLowerCase();
+  return target.isContentEditable || tagName === "input" || tagName === "textarea" || tagName === "select";
+}
+
 function getStatePill(state: AIState) {
   if (state === "thinking" || state === "transcribing")
     return { label: "Thinking", dot: "bg-warning" };
@@ -223,6 +229,7 @@ export function AIBubble() {
   const pathname = usePathname();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const restoreComposerFocusRef = useRef(false);
   const store = useAgentStore();
   const { open, messages, state, error, voiceMode, micLevel } = store;
 
@@ -247,6 +254,38 @@ export function AIBubble() {
     if (open) unlockAudio();
   }, [open]);
 
+  const focusComposer = useCallback(() => {
+    if (!open || voiceMode || state === "thinking") return;
+    requestAnimationFrame(() => {
+      textareaRef.current?.focus({ preventScroll: true });
+    });
+  }, [open, state, voiceMode]);
+
+  useEffect(() => {
+    if (open && !voiceMode) {
+      focusComposer();
+    }
+  }, [focusComposer, open, voiceMode]);
+
+  useEffect(() => {
+    if (!open || voiceMode || state === "thinking" || !restoreComposerFocusRef.current) return;
+    restoreComposerFocusRef.current = false;
+    focusComposer();
+  }, [focusComposer, open, state, voiceMode]);
+
+  useEffect(() => {
+    if (!open || voiceMode || state === "thinking") return;
+
+    function onKeyDown(e: KeyboardEvent) {
+      if (e.defaultPrevented || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key.length !== 1 || isEditableTarget(e.target)) return;
+      focusComposer();
+    }
+
+    window.addEventListener("keydown", onKeyDown, true);
+    return () => window.removeEventListener("keydown", onKeyDown, true);
+  }, [focusComposer, open, state, voiceMode]);
+
   // ESC closes the panel (when open).
   useEffect(() => {
     if (!open) return;
@@ -264,6 +303,7 @@ export function AIBubble() {
       textareaRef.current.value = "";
       textareaRef.current.style.height = "auto";
     }
+    restoreComposerFocusRef.current = true;
     void store.send(text, router, { fromVoice: false });
   }
 
@@ -345,10 +385,7 @@ export function AIBubble() {
                     title={pill.label}
                   >
                     {showAgentDots ? (
-                      <>
-                        <span>Thinking</span>
-                        <ThinkingDots />
-                      </>
+                      <ThinkingDots />
                     ) : (
                       <>
                         <motion.span
