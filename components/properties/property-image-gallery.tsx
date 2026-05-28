@@ -11,9 +11,9 @@ type PropertyImageGalleryProps = {
   propertyId: number;
   title: string;
   className?: string;
-  /** Smaller hero + thumbs — investor detail modal. */
+/** Smaller hero + thumbs — investor detail modal. */
   variant?: "default" | "compact";
-  /** Auto-cycle hero when there are 2+ images (default: true for compact). */
+  /** Auto-cycle hero when there are 2+ images. */
   autoPlay?: boolean;
 };
 
@@ -46,7 +46,7 @@ export function PropertyImageGallery({
   const pauseUntilRef = useRef(0);
   const current = safeImages[index] ?? null;
   const hasMultiple = safeImages.length > 1;
-  const autoPlay = (autoPlayProp ?? compact) && hasMultiple;
+  const autoPlay = (autoPlayProp ?? true) && hasMultiple;
 
   useEffect(() => {
     setIndex(0);
@@ -74,7 +74,7 @@ export function PropertyImageGallery({
   }, [index, hasMultiple]);
 
   function selectImage(next: number) {
-    pauseUntilRef.current = Date.now() + AUTO_ADVANCE_MS;
+    pauseUntilRef.current = Date.now() + AUTO_ADVANCE_MS * 2;
     setIndex(next);
   }
 
@@ -100,14 +100,20 @@ export function PropertyImageGallery({
           />
         ) : null}
 
-        {autoPlay ? (
-          <div className="pointer-events-none absolute inset-x-0 bottom-2 flex justify-center gap-1">
+        {hasMultiple ? (
+          <div className="absolute inset-x-0 bottom-3 z-10 flex justify-center gap-1.5">
             {safeImages.map((_, dotIndex) => (
-              <span
+              <button
                 key={dotIndex}
+                type="button"
+                aria-label={`Show image ${dotIndex + 1}`}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  selectImage(dotIndex);
+                }}
                 className={cn(
-                  "h-1.5 rounded-full bg-white/80 shadow-sm transition-all",
-                  dotIndex === index ? "w-4 bg-white" : "w-1.5 opacity-80",
+                  "h-1.5 rounded-full bg-white/80 shadow-sm ring-1 ring-black/5 transition-all",
+                  dotIndex === index ? "w-5 bg-white" : "w-1.5 opacity-80 hover:opacity-100",
                 )}
               />
             ))}

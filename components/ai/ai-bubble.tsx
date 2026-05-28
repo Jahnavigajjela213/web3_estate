@@ -60,15 +60,19 @@ const ACTION_TINTS: { bg: string; ring: string; icon: string }[] = [
 
 function ThinkingDots() {
   return (
-    <div className="flex items-center gap-1 px-1 py-1.5">
-      {[0, 1, 2].map((i) => (
-        <motion.span
-          key={i}
-          className="h-1.5 w-1.5 rounded-full bg-foreground/50"
-          animate={{ y: [0, -3, 0], opacity: [0.3, 1, 0.3] }}
-          transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
-        />
-      ))}
+    <div className="flex items-center gap-2 px-1 py-1 text-[12.5px] font-medium text-muted-foreground">
+      <span>Agent is typing</span>
+      <span className="flex items-center gap-1" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <motion.span
+            key={i}
+            className="h-1.5 w-1.5 rounded-full bg-primary/75"
+            animate={{ y: [0, -3, 0], opacity: [0.35, 1, 0.35] }}
+            transition={{ duration: 0.9, repeat: Infinity, delay: i * 0.12, ease: "easeInOut" }}
+          />
+        ))}
+      </span>
+      <span className="sr-only">Agent is typing</span>
     </div>
   );
 }
@@ -438,11 +442,9 @@ export function AIBubble() {
                 )}
 
                 <AnimatePresence>
-                  {busy &&
-                    !showWelcome &&
-                    lastMessages.length > 0 &&
-                    lastMessages[lastMessages.length - 1]?.role !== "assistant" && (
+                  {busy && !showWelcome && (
                       <motion.div
+                        key="agent-typing"
                         initial={{ opacity: 0, y: 4 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0 }}

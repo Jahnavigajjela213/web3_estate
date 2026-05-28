@@ -91,7 +91,7 @@ export function InvestorPropertyDetailContent({ property }: { property: Property
         title={property.name}
       />
 
-      <div className="rounded-lg border border-border bg-card p-3 shadow-sm">
+      <div className="rounded-lg border border-border bg-card p-4 shadow-sm">
         <div className="grid grid-cols-2 gap-x-4 gap-y-3 sm:grid-cols-3 lg:grid-cols-5">
           <DetailMetric
             label="Monthly rent"
@@ -247,9 +247,11 @@ function DetailMetric({
 }) {
   return (
     <div className={cn("min-w-0", className)}>
-      <div className="text-[9px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</div>
-      <div className="mt-0.5 text-sm font-semibold leading-tight tabular-nums text-foreground">{value}</div>
-      {subValue ? <div className="text-[11px] font-medium text-muted-foreground">{subValue}</div> : null}
+      <div className="whitespace-nowrap text-[10px] font-semibold uppercase leading-none tracking-wide text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-1.5 truncate text-lg font-semibold leading-tight tabular-nums text-foreground">{value}</div>
+      {subValue ? <div className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{subValue}</div> : null}
     </div>
   );
 }

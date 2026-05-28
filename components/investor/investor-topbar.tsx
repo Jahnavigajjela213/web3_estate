@@ -26,16 +26,16 @@ export function InvestorTopbar({
         "dark:border-border/60 dark:bg-background/75",
       )}
       actions={
-        <>
+        <div className="flex min-w-0 items-center justify-end gap-2 overflow-hidden">
           <AmbientSystemPulse
-            className={`${INVESTOR_TOPBAR_CONTROL_CLASS} flex px-3 text-xs`}
+            className="hidden h-8 max-w-[170px] shrink truncate px-2.5 text-xs md:flex"
           />
-          <WalletPill className={INVESTOR_TOPBAR_CONTROL_CLASS} />
-          <ThemeToggle className={`${INVESTOR_TOPBAR_CONTROL_CLASS} w-[3.25rem]`} />
-          <span className={`${INVESTOR_TOPBAR_CONTROL_CLASS} grid w-9 place-items-center`}>
+          <WalletPill className="h-8 shrink-0" />
+          <ThemeToggle className="h-8 w-14 shrink-0" />
+          <span className="grid h-8 w-5 shrink-0 place-items-center">
             <StatusDot />
           </span>
-        </>
+        </div>
       }
     />
   );

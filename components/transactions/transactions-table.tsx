@@ -41,29 +41,8 @@ import { cn, formatDateTime, shortAddress } from "@/lib/utils";
 import type { Transaction } from "@/lib/types";
 
 const PAGE_SIZE = 12;
-
-type InvestorTypeFilter = "all" | "investment" | "yield_claimed";
-
-const INVESTMENT_TYPES = new Set([
-  "investment",
-  "INVESTMENT_COMPLETED",
-  "INVESTMENT_FUNDED",
-  "ISSUE_TOKENS",
-]);
-
-const YIELD_CLAIMED_TYPES = new Set(["REWARDS_CLAIMED"]);
-
-const INVESTOR_TYPE_FILTER_OPTIONS: { value: InvestorTypeFilter; label: string }[] = [
-  { value: "all", label: "All types" },
-  { value: "investment", label: "Investment" },
-  { value: "yield_claimed", label: "Yield Claimed" },
-];
-
-function matchesInvestorTypeFilter(type: string, filter: InvestorTypeFilter) {
-  if (filter === "all") return true;
-  if (filter === "investment") return INVESTMENT_TYPES.has(type);
-  return YIELD_CLAIMED_TYPES.has(type);
-}
+const ALL_TYPES = "all";
+const ALL_PROPERTIES = "all";
 
 const TYPE_META: Record<string, { color: string; icon: LucideIcon; label: string }> = {
   investment: { color: "bg-chart-1/15 text-chart-1", icon: Coins, label: "Investment" },
@@ -95,22 +74,57 @@ function statusBadge(status?: string) {
 export function TransactionsTable({
   transactions,
   loading,
-  showTypeFilter = false,
 }: {
   transactions: Transaction[];
   loading?: boolean;
-  /** Investor transactions: filter by Investment / Yield Claimed */
+  /** Kept for compatibility; the table now always shows type + property filters. */
   showTypeFilter?: boolean;
 }) {
   const [page, setPage] = useState(1);
   const [search, setSearch] = useState("");
-  const [typeFilter, setTypeFilter] = useState<InvestorTypeFilter>("all");
+  const [typeFilter, setTypeFilter] = useState(ALL_TYPES);
+  const [propertyFilter, setPropertyFilter] = useState(ALL_PROPERTIES);
   const [active, setActive] = useState<Transaction | null>(null);
+
+  const typeOptions = useMemo(() => {
+    const grouped = new Map<string, { value: string; label: string; types: Set<string> }>();
+    for (const tx of transactions) {
+      const label = TYPE_META[tx.type]?.label ?? prettyType(tx.type);
+      const key = label.toLowerCase();
+      const existing = grouped.get(key);
+      if (existing) {
+        existing.types.add(tx.type);
+      } else {
+        grouped.set(key, { value: tx.type, label, types: new Set([tx.type]) });
+      }
+    }
+    return Array.from(grouped.values()).sort((a, b) => a.label.localeCompare(b.label));
+  }, [transactions]);
+
+  const propertyOptions = useMemo(() => {
+    const grouped = new Map<string, string>();
+    for (const tx of transactions) {
+      const value = tx.property_id != null ? String(tx.property_id) : tx.property_name || "";
+      if (!value) continue;
+      const label = tx.property_name || `#${tx.property_id}`;
+      grouped.set(value, label);
+    }
+    return Array.from(grouped.entries())
+      .map(([value, label]) => ({ value, label }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [transactions]);
 
   const filtered = useMemo(() => {
     let rows = transactions;
-    if (showTypeFilter && typeFilter !== "all") {
-      rows = rows.filter((t) => matchesInvestorTypeFilter(t.type, typeFilter));
+    if (typeFilter !== ALL_TYPES) {
+      const option = typeOptions.find((item) => item.value === typeFilter);
+      rows = rows.filter((t) => option?.types.has(t.type) ?? t.type === typeFilter);
+    }
+    if (propertyFilter !== ALL_PROPERTIES) {
+      rows = rows.filter((t) => {
+        const value = t.property_id != null ? String(t.property_id) : t.property_name || "";
+        return value === propertyFilter;
+      });
     }
     if (!search.trim()) return rows;
     const q = search.toLowerCase();
@@ -122,7 +136,7 @@ export function TransactionsTable({
         t.action_label?.toLowerCase().includes(q) ||
         (TYPE_META[t.type]?.label ?? "").toLowerCase().includes(q),
     );
-  }, [transactions, search, showTypeFilter, typeFilter]);
+  }, [transactions, search, typeFilter, propertyFilter, typeOptions]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
   const safePage = Math.min(page, totalPages);
@@ -144,32 +158,24 @@ export function TransactionsTable({
               className="h-9 pl-8 text-sm"
             />
           </div>
-          {showTypeFilter ? (
-            <div className="relative w-full sm:w-[180px] sm:shrink-0">
-              <select
-                value={typeFilter}
-                onChange={(e) => {
-                  setTypeFilter(e.target.value as InvestorTypeFilter);
-                  setPage(1);
-                }}
-                aria-label="Filter by transaction type"
-                className={cn(
-                  "h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-background pl-3 pr-9 text-sm shadow-sm",
-                  "text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-                )}
-              >
-                {INVESTOR_TYPE_FILTER_OPTIONS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <ChevronDown
-                className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
-                aria-hidden
-              />
-            </div>
-          ) : null}
+          <FilterSelect
+            value={typeFilter}
+            onChange={(value) => {
+              setTypeFilter(value);
+              setPage(1);
+            }}
+            ariaLabel="Filter by transaction type"
+            options={[{ value: ALL_TYPES, label: "All types" }, ...typeOptions.map(({ value, label }) => ({ value, label }))]}
+          />
+          <FilterSelect
+            value={propertyFilter}
+            onChange={(value) => {
+              setPropertyFilter(value);
+              setPage(1);
+            }}
+            ariaLabel="Filter by property"
+            options={[{ value: ALL_PROPERTIES, label: "All properties" }, ...propertyOptions]}
+          />
         </div>
         <span className="shrink-0 text-xs text-muted-foreground sm:text-right">
           {filtered.length} transaction{filtered.length === 1 ? "" : "s"}
@@ -275,6 +281,50 @@ export function TransactionsTable({
       </div>
 
       <TransactionDialog tx={active} onClose={() => setActive(null)} />
+    </div>
+  );
+}
+
+function prettyType(type: string) {
+  return type
+    .split("_")
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
+}
+
+function FilterSelect({
+  value,
+  onChange,
+  ariaLabel,
+  options,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  ariaLabel: string;
+  options: Array<{ value: string; label: string }>;
+}) {
+  return (
+    <div className="relative w-full sm:w-[180px] sm:shrink-0">
+      <select
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        aria-label={ariaLabel}
+        className={cn(
+          "h-9 w-full cursor-pointer appearance-none rounded-md border border-input bg-background pl-3 pr-9 text-sm shadow-sm",
+          "text-foreground transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+        )}
+      >
+        {options.map((opt) => (
+          <option key={opt.value} value={opt.value}>
+            {opt.label}
+          </option>
+        ))}
+      </select>
+      <ChevronDown
+        className="pointer-events-none absolute right-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+        aria-hidden
+      />
     </div>
   );
 }

@@ -336,10 +336,10 @@ export function PropertyDetailDialog({
 function StatPill({ label, value, subValue }: { label: string; value: React.ReactNode; subValue?: React.ReactNode }) {
   return (
     <div className="min-w-0 text-left">
-      <div className="line-clamp-2 text-[11px] font-semibold uppercase leading-tight tracking-wide text-muted-foreground">
+      <div className="whitespace-nowrap text-[10px] font-semibold uppercase leading-none tracking-wide text-muted-foreground">
         {label}
       </div>
-      <div className="mt-1 truncate text-base font-semibold leading-tight tabular-nums text-foreground">
+      <div className="mt-1.5 truncate text-lg font-semibold leading-tight tabular-nums text-foreground">
         {value}
       </div>
       {subValue ? <div className="mt-0.5 truncate text-xs font-medium text-muted-foreground">{subValue}</div> : null}

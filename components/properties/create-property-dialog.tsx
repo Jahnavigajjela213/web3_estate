@@ -178,7 +178,7 @@ export function CreatePropertyDialog() {
   // silent and the UI looks frozen.
   // ───────────────────────────────────────────────────────────────
   async function submitWorkflowForm(stateValues: FormState) {
-    setStepEvents([]); // reset any leftover progress from a prior attempt
+    setStepEvents(["creating"]); // show progress immediately for manual and chatbot submits
     // Resolve from the agent's workflow cache → DOM → React state.
     // See `resolveSubmitValues` for why the cache wins (it's untouched
     // by render races and is exactly what the agent intended to submit).
@@ -209,7 +209,7 @@ export function CreatePropertyDialog() {
         },
         onProgress: (event: CreatePropertyEvent) => {
           // Append the step so the derived status updates in real time.
-          setStepEvents((prev) => [...prev, event.step]);
+          setStepEvents((prev) => (prev[prev.length - 1] === event.step ? prev : [...prev, event.step]));
         },
       });
       const named = values.name.trim();
@@ -438,7 +438,7 @@ export function CreatePropertyDialog() {
             images={form.images}
             onChange={(images) => setForm((f) => ({ ...f, images }))}
           />
-          {(create.isPending || stepEvents.includes("error")) && (
+          {(create.isPending || stepEvents.length > 0 || stepEvents.includes("error")) && (
             <div className="rounded-lg border border-border bg-muted/25 p-3">
               {/* Top-line progress bar — fills from 0% → 100% as backend
                   steps complete. Visible motion so the user knows the
