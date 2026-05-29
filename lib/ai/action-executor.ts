@@ -1,5 +1,8 @@
 "use client";
 
+import { clearSession, getApiBase, getToken } from "../api";
+import { markPropertyCreationComplete, markPropertyCreationPending } from "../properties/visibility";
+import type { Property } from "../types";
 import type { AIAction } from "./types";
 
 const delay = (ms: number) => new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -10,6 +13,7 @@ const MODAL_RETRY_DELAY = 220;
 const ACTION_EVENT = "estatechain:ai-action";
 const COMPLETION_EVENT = "estatechain:ai-completion";
 const PENDING_TTL = 8000;
+const CREATE_PROPERTY_MODAL = "CREATE_PROPERTY";
 
 export type AICompletionStatus = "success" | "error";
 
@@ -135,6 +139,128 @@ export function waitForCompletion(modal: string, timeoutMs = 120_000): Promise<A
   });
 }
 
+type CreatePropertyStreamEvent = {
+  step?: string;
+  property?: Property;
+  property_id?: number;
+  detail?: string;
+};
+
+function tokenPriceEth(totalValue: string, tokenSupply: string): number {
+  const total = Number(totalValue);
+  const supply = Number(tokenSupply);
+  if (!Number.isFinite(total) || !Number.isFinite(supply) || total <= 0 || supply <= 0) return 0;
+  return total / supply;
+}
+
+function buildCreatePropertyPayload() {
+  const values = workflowFormValues.get(CREATE_PROPERTY_MODAL) ?? {};
+  const name = String(values.name ?? "").trim();
+  const location = String(values.location ?? "").trim();
+  const totalValue = String(values.total_value ?? "").trim();
+  const tokenSupply = String(values.token_supply ?? "").trim();
+  const tokenSymbol = String(values.token_symbol ?? "").trim();
+  const monthlyRent = String(values.monthly_rent_eth ?? "").trim();
+  const missing = [
+    ["name", name],
+    ["location", location],
+    ["total value", totalValue],
+    ["token supply", tokenSupply],
+    ["token symbol", tokenSymbol],
+  ].filter(([, value]) => !value).map(([label]) => label);
+
+  if (missing.length > 0) {
+    throw new Error(`Missing property details: ${missing.join(", ")}.`);
+  }
+
+  const price = tokenPriceEth(totalValue, tokenSupply);
+  return {
+    name,
+    location,
+    total_value: totalValue,
+    token_supply: tokenSupply,
+    token_symbol: tokenSymbol,
+    token_sale_price_eth: price > 0 ? price : "",
+    monthly_rent_eth: monthlyRent || null,
+  };
+}
+
+async function submitCreatePropertyFromChat(): Promise<boolean> {
+  const payload = buildCreatePropertyPayload();
+  const base = getApiBase();
+  const token = getToken();
+  const res = await fetch(`${base}/properties/stream`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Accept: "text/event-stream",
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!res.ok) {
+    if (res.status === 401) clearSession();
+    const text = await res.text().catch(() => "");
+    let detail = res.status === 401 ? "Session expired. Please reconnect your wallet and try again." : `HTTP ${res.status}`;
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed?.detail && res.status !== 401) detail = String(parsed.detail);
+    } catch {
+      if (text) detail = text;
+    }
+    throw new Error(detail);
+  }
+
+  const reader = res.body?.getReader();
+  if (!reader) throw new Error("No response body");
+  const decoder = new TextDecoder();
+  let buffer = "";
+  let finalProperty: Property | null = null;
+  let finalError: string | null = null;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+    const parts = buffer.split("\n\n");
+    buffer = parts.pop() || "";
+    for (const part of parts) {
+      for (const line of part.split("\n")) {
+        if (!line.startsWith("data: ")) continue;
+        const raw = line.slice(6).trim();
+        if (!raw) continue;
+        let event: CreatePropertyStreamEvent;
+        try {
+          event = JSON.parse(raw) as CreatePropertyStreamEvent;
+        } catch {
+          continue;
+        }
+        const propertyId = event.property?.id ?? event.property_id;
+        if (event.step === "done") {
+          markPropertyCreationComplete(propertyId);
+          if (event.property) finalProperty = event.property;
+        } else if (event.step === "error") {
+          finalError = event.detail || "Property creation failed.";
+        } else if (propertyId) {
+          markPropertyCreationPending(propertyId);
+        }
+      }
+    }
+  }
+
+  if (finalError) throw new Error(finalError);
+  if (!finalProperty) throw new Error("Property creation finished without a result.");
+  clearPendingModalActions(CREATE_PROPERTY_MODAL);
+  emitCompletion({
+    modal: CREATE_PROPERTY_MODAL,
+    status: "success",
+    message: `Property '${payload.name}' created successfully.`,
+  });
+  window.dispatchEvent(new CustomEvent("estatechain:ai-data-changed"));
+  return true;
+}
+
 export function focusField(modal: string, field: string) {
   if (typeof document === "undefined") return;
   // Never steal focus from the AI chat textbox — if the user is mid-
@@ -252,6 +378,24 @@ async function clickWorkflowSubmitVisibly(modal: string): Promise<boolean> {
 /** Execute a single UI action. */
 export async function executeAction(action: AIAction, router: { push: (href: string) => void }) {
   console.log("[AI Action] Executing:", action.type, action);
+  if (action.modal === CREATE_PROPERTY_MODAL && action.type === "OPEN_MODAL") {
+    workflowFormValues.delete(CREATE_PROPERTY_MODAL);
+    clearPendingModalActions(CREATE_PROPERTY_MODAL);
+    return;
+  }
+  if (action.modal === CREATE_PROPERTY_MODAL && action.type === "FOCUS_FIELD") {
+    return;
+  }
+  if (action.modal === CREATE_PROPERTY_MODAL && action.type === "FILL_FIELD" && action.field) {
+    const values = workflowFormValues.get(CREATE_PROPERTY_MODAL) ?? {};
+    values[action.field] = String(action.value ?? "");
+    workflowFormValues.set(CREATE_PROPERTY_MODAL, values);
+    return;
+  }
+  if (action.modal === CREATE_PROPERTY_MODAL && action.type === "SUBMIT_FORM") {
+    await submitCreatePropertyFromChat();
+    return;
+  }
   if (action.type === "NAVIGATE" && action.route) {
     console.log("[AI Action] Navigating to:", action.route);
     router.push(action.route);
@@ -325,7 +469,9 @@ export async function executeAction(action: AIAction, router: { push: (href: str
 }
 
 export async function executeActions(actions: AIAction[], router: { push: (href: string) => void }) {
+  const isCreatePropertyWorkflow = actions.some((action) => action.modal === CREATE_PROPERTY_MODAL);
   for (const action of actions) {
+    if (isCreatePropertyWorkflow && action.type === "NAVIGATE") continue;
     await executeAction(action, router);
   }
 }

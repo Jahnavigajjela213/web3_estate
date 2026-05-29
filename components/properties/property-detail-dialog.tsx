@@ -114,16 +114,23 @@ export function PropertyDetailDialog({
     if (!property) return null;
     if (property.owner_wallet) return property.owner_wallet;
 
-    const creatorTx = (transactionsQuery.data ?? []).find((tx) => {
+    const propertyTransactions = (transactionsQuery.data ?? []).filter((tx) => {
+      return tx.wallet_address && String(tx.property_id ?? "") === String(property.id);
+    });
+    const creatorTx = propertyTransactions.find((tx) => {
       if (!tx.wallet_address || String(tx.property_id ?? "") !== String(property.id)) return false;
       const type = tx.type?.toLowerCase() ?? "";
       return (
         type.includes("property_listing") ||
+        type.includes("property_created") ||
+        type.includes("create_property") ||
+        type.includes("property_create") ||
         type.includes("property_token_deployment") ||
+        type.includes("security_token") ||
         type.includes("mint_nft") ||
         type.includes("token_deployed")
       );
-    });
+    }) ?? propertyTransactions[0];
     return creatorTx?.wallet_address ?? null;
   }, [property, transactionsQuery.data]);
 
