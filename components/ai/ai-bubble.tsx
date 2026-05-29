@@ -71,7 +71,6 @@ function ThinkingDots() {
           />
         ))}
       </span>
-      <span className="sr-only">Agent is typing</span>
     </div>
   );
 }
@@ -552,29 +551,8 @@ export function AIBubble() {
                           }}
                         />
                       ))
-                    ) : isSpeaking ? (
-                      [...Array(16)].map((_, i) => (
-                        <motion.div
-                          key={i}
-                          className="w-[2px] rounded-full bg-[hsl(var(--chart-3))]"
-                          animate={{ height: [6, 22, 6] }}
-                          transition={{
-                            duration: 0.8,
-                            repeat: Infinity,
-                            delay: i * 0.06,
-                            ease: "easeInOut",
-                          }}
-                        />
-                      ))
-                    ) : busy ? (
-                      <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
-                        <motion.span
-                          className="inline-block h-1.5 w-1.5 rounded-full bg-warning"
-                          animate={{ scale: [1, 1.4, 1], opacity: [0.5, 1, 0.5] }}
-                          transition={{ duration: 1.2, repeat: Infinity }}
-                        />
-                        Thinking…
-                      </div>
+                    ) : showAgentDots ? (
+                      <ThinkingDots />
                     ) : (
                       <div className="flex items-center gap-1.5 text-[12px] text-muted-foreground">
                         <span className="h-1.5 w-1.5 rounded-full bg-primary" />
@@ -585,7 +563,7 @@ export function AIBubble() {
 
                   <div className="flex min-h-[18px] items-center justify-center text-[11.5px] text-muted-foreground">
                     {showAgentDots ? (
-                      <ThinkingDots />
+                      null
                     ) : isListening ? (
                       "Listening — speak naturally"
                     ) : (

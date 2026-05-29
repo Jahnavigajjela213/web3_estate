@@ -141,10 +141,10 @@ export function focusField(modal: string, field: string) {
   // conversation their next keystroke must land in chat, not in the
   // form the agent is filling out. (Voice mode renders no chat input,
   // so this guard naturally no-ops there and we focus normally.)
-  const chatInput = document.querySelector<HTMLInputElement>(
+  const chatInput = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
     "[data-ai-chat-input]",
   );
-  if (chatInput && !chatInput.disabled) return;
+  if (chatInput) return;
   const node = document.querySelector<HTMLInputElement | HTMLTextAreaElement | HTMLButtonElement>(
     `[data-workflow-field="${modal}.${field}"]`,
   );

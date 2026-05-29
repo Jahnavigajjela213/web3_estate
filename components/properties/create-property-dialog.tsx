@@ -338,10 +338,10 @@ export function CreatePropertyDialog() {
         // remains the authoritative input while the agent drives the form.
         onOpenAutoFocus={(e) => {
           if (typeof document === "undefined") return;
-          const chat = document.querySelector<HTMLInputElement>(
+          const chat = document.querySelector<HTMLInputElement | HTMLTextAreaElement>(
             '[data-ai-chat-input]',
           );
-          if (chat && !chat.disabled) e.preventDefault();
+          if (chat) e.preventDefault();
         }}
       >
         <DialogHeader className="border-b border-border/60 px-4 pb-4 pt-4">
